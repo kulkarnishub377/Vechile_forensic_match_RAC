@@ -81,15 +81,10 @@ async def startup_event():
     except Exception as e:
         logger.error(f"[WARN] Model loading failed: {e}")
         logger.warning("Models will be loaded on first request")
-    
-    # Initialize database connection
-    try:
-        from ..database.db_connection import get_db_connection
-        db = get_db_connection()
-        logger.info("[OK] Database connection pool initialized")
-    except Exception as e:
-        logger.error(f"[WARN] Database initialization failed: {e}")
-    
+
+    # NOTE: Database initialization removed - system is now standalone
+    # Images are uploaded locally instead of fetched from database
+
     # Initialize FAISS manager
     try:
         from ..storage.faiss_manager import get_faiss_manager
@@ -109,16 +104,9 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown"""
     logger.info("Shutting down Vehicle Matching Service...")
-    
-    # Close database connections
-    try:
-        from ..database.db_connection import get_db_connection
-        db = get_db_connection()
-        db.close_all()
-        logger.info("[OK] Database connections closed")
-    except Exception as e:
-        logger.error(f"Error closing database: {e}")
-    
+
+    # NOTE: Database cleanup removed - system is now standalone
+
     # Clear FAISS cache
     try:
         from ..storage.faiss_manager import get_faiss_manager
