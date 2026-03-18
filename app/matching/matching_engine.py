@@ -11,7 +11,7 @@ from .feature_scorer import get_feature_scorer
 from .reranker import get_reranker
 from .confidence_analyzer import analyze_match_confidence
 from ..core.embedding_engine import get_embedding_engine
-from ..database.entry_queries import get_entry_queries
+# NOTE: Database import removed - system is now standalone
 from ..storage.metadata_manager import get_metadata_manager
 from .. import config
 
