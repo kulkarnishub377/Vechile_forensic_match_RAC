@@ -270,20 +270,22 @@ top_k=fetch_k,
     
     def _batch_get_entries(self, entry_ids: List[str]) -> List[Optional[Dict]]:
         """
-        Batch fetch entry records to avoid N+1 queries
-        
+        Batch fetch entry metadata records (no database)
+
+        NOTE: Updated to use metadata_manager instead of database queries
+
         Returns:
-            List of entry records (same order as entry_ids)
+            List of metadata records (same order as entry_ids)
         """
         try:
-            # Check if entry_queries supports batch operations
-            if hasattr(self.entry_queries, 'get_entries_batch'):
-                return self.entry_queries.get_entries_batch(entry_ids)
-            else:
-                # Fallback: individual queries (still better than in loop)
-                return [self.entry_queries.get_entry_by_id(tid) for tid in entry_ids]
+            # Use metadata_manager to get metadata for each ID
+            results = []
+            for entry_id in entry_ids:
+                metadata = self.metadata_manager.get_metadata_by_id(entry_id)
+                results.append(metadata)
+            return results
         except Exception as e:
-            logger.error(f"Batch entry fetch failed: {e}", exc_info=True)
+            logger.error(f"Batch metadata fetch failed: {e}", exc_info=True)
             return [None] * len(entry_ids)
     
     def _score_matches(
