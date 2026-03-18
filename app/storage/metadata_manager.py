@@ -100,7 +100,8 @@ class MetadataManager:
                 
                 # Convert numpy arrays to lists for JSON serialization
                 serializable_data = {
-                    'transaction_id': transaction_id,
+                    'transaction_id': transaction_id,  # Keep for backward compat, also 'unique_id'
+                    'unique_id': transaction_id,  # NEW - unified ID field
                     'timestamp': timestamp.isoformat(),
                     'color_histogram': embedding_data['color_histogram'].tolist() if isinstance(embedding_data['color_histogram'], np.ndarray) else embedding_data['color_histogram'],
                     'ocr_text': embedding_data['ocr_text'],
@@ -110,6 +111,18 @@ class MetadataManager:
                     'aspect_ratio': embedding_data['aspect_ratio'],
                     'vehicle_confidence': embedding_data['vehicle_confidence']
                 }
+
+                # Add new fields for upload mode (optional, None if not provided)
+                if image_path is not None:
+                    serializable_data['image_path'] = image_path
+                if original_filename is not None:
+                    serializable_data['original_filename'] = original_filename
+                if vehicle_type is not None:
+                    serializable_data['vehicle_type'] = vehicle_type
+                if file_size_bytes is not None:
+                    serializable_data['file_size_bytes'] = file_size_bytes
+                if image_dimensions is not None:
+                    serializable_data['image_dimensions'] = list(image_dimensions)
                 
                 # Add to partition
                 partition_data[transaction_id] = serializable_data
