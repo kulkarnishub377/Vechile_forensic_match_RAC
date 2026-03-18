@@ -57,10 +57,10 @@ python-multipart>=0.0.6
 pydantic>=2.5.0
 
 # ============================================================================
-# Database
+# Database (REMOVED - System is now standalone)
 # ============================================================================
-pyodbc>=5.0.0
-sqlalchemy>=2.0.0
+# pyodbc>=5.0.0  # REMOVED - No longer using SQL Server
+sqlalchemy>=2.0.0  # Keep for potential future use
 
 # ============================================================================
 # Monitoring (Prometheus)
