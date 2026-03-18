@@ -115,29 +115,46 @@ d:\_frame_image_finder/                    📦 ROOT
 
 ## 🚀 Quick Start (5 minutes)
 
-### **1. Install Dependencies**
+### **1. Copy Environment Template**
+
+```bash
+# Copy environment template for sensitive credentials
+copy .env.example .env
+
+# Edit .env with YOUR values (passwords, server IPs, paths)
+# NOTE: Keep .env in .gitignore - never commit credentials!
+```
+
+See [.env.example](.env.example) for all variables that need configuration.
+
+### **2. Configure Application**
+
+```bash
+# Edit configuration with YOUR environment details
+# Location: configs/config.ini
+# Key settings to update:
+#   - [database] section: server, database, username, password
+#   - [paths] section: image path mappings
+#   - Model paths (should auto-detect from models/ folder)
+
+edit configs/config.ini
+```
+
+### **3. Install Dependencies**
 
 ```bash
 cd d:\_frame_image_finder
 pip install -r requirements.txt
 ```
 
-### **2. Review Configuration**
-
-```bash
-# Edit configuration (update database credentials, paths, models)
-# Location: configs/config.ini
-# Key settings: database connection, image paths, ML model backends
-```
-
-### **3. Verify System**
+### **4. Verify System**
 
 ```bash
 # Check all components working correctly
 python tools/verify_system.py
 ```
 
-### **4. Start Services**
+### **5. Start Services**
 
 ```bash
 # Terminal 1: REST API Server (http://localhost:8000)
@@ -150,7 +167,7 @@ python scripts/run_ingestion.py
 python tools/monitor_ingestion.py
 ```
 
-### **5. Test API**
+### **6. Test API**
 
 ```bash
 # API Documentation: http://localhost:8000/docs
