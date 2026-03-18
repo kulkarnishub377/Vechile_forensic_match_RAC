@@ -201,29 +201,20 @@ class MatchingEngine:
         logger.info(f"  Fetching {fetch_k} embedding candidates (top_k={top_k})")
         
         try:
-            # STEP 1: Get UNCOMBINED entry IDs (PROCESS_FLAG <> 'C')
-            logger.info("  Pre-filtering UNCOMBINED ENTRY transactions (PROCESS_FLAG <> 'C')...")
-            
-            uncombined_ids = self.entry_queries.fetch_uncombined_entry_ids(
-                exit_timestamp=exit_timestamp,
-                time_window_hours=config.MATCHING_SEARCH_WINDOW_HOURS
-            )
-            
-            if not uncombined_ids:
-                logger.warning("  No UNCOMBINED entries found in time window")
-                return []
-            
-            logger.info(f"  Found {len(uncombined_ids)} UNCOMBINED entries for filtering")
-            
-            # STEP 2: Search FAISS and filter by UNCOMBINED IDs
+            # NOTE: Database filtering removed - search all indexed images
+            # Previously filtered by UNCOMBINED entries (PROCESS_FLAG <> 'C')
+            # Now searches all uploaded images in FAISS index
+            logger.info("  Searching all indexed images (no database filtering)...")
+
+            # Search FAISS for all matching vectors (no pre-filtering)
             embedding_results = self.embedding_matcher.find_embedding_matches(
                 query_embedding=query_embedding,
                 exit_timestamp=exit_timestamp,
-                top_k=fetch_k,
-                uncombined_ids=uncombined_ids
+top_k=fetch_k,
+                uncombined_ids=None  # Search all, no filtering
             )
-            
-            logger.info(f"  Found {len(embedding_results)} UNCOMBINED embedding candidates")
+
+            logger.info(f"  Found {len(embedding_results)} embedding candidates")
             return embedding_results
             
         except Exception as e:
