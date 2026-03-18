@@ -33,7 +33,7 @@ class MatchingEngine:
         self.feature_scorer = get_feature_scorer()
         self.reranker = get_reranker()
         self.embedding_engine = get_embedding_engine()
-        self.entry_queries = get_entry_queries()
+        # NOTE: entry_queries removed - no longer using database
         self.metadata_manager = get_metadata_manager()
         
         self.total_matches = 0
