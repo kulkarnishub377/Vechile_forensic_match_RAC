@@ -69,31 +69,27 @@ def map_image_path(db_path: str) -> str:
     return db_path
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# DATABASE
+# UPLOAD CONFIGURATION (NEW - Standalone System)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MSSQL_SERVER = _get('database', 'server', '') or os.getenv('MSSQL_SERVER', '')
-MSSQL_DATABASE = _get('database', 'database', '') or os.getenv('MSSQL_DATABASE', '')
-MSSQL_USERNAME = _get('database', 'username', '') or os.getenv('MSSQL_USERNAME', '')
-MSSQL_PASSWORD = os.getenv('MSSQL_PASSWORD')  # REQUIRED: Set environment variable
-MSSQL_DRIVER = _get('database', 'driver', 'ODBC Driver 18 for SQL Server')
-MSSQL_TRUST_CERTIFICATE = _get('database', 'trust_certificate', 'yes')
-MSSQL_ENCRYPT = _get('database', 'encrypt', 'no')
+# NOTE: Database configuration removed - system is now standalone
+# Images are uploaded locally instead of fetched from database
 
-MSSQL_POOL_SIZE = _getint('database', 'pool_size', 20)
-MSSQL_MAX_OVERFLOW = _getint('database', 'max_overflow', 40)
-MSSQL_POOL_TIMEOUT = _getint('database', 'pool_timeout', 30)
-MSSQL_POOL_RECYCLE = _getint('database', 'pool_recycle', 3600)
-MSSQL_QUERY_TIMEOUT = _getint('database', 'query_timeout', 30)
+# Upload directories
+UPLOAD_DIR = DATA_DIR / 'uploads'
+ENTRY_UPLOAD_DIR = UPLOAD_DIR / 'entry'
+EXIT_UPLOAD_DIR = UPLOAD_DIR / 'exit'
 
-# Database connection aliases (for backward compatibility)
-DB_DRIVER = MSSQL_DRIVER
-DB_HOST = MSSQL_SERVER.split(',')[0] if ',' in MSSQL_SERVER else MSSQL_SERVER
-DB_PORT = int(MSSQL_SERVER.split(',')[1]) if ',' in MSSQL_SERVER else 1433
-DB_NAME = MSSQL_DATABASE
-DB_USER = MSSQL_USERNAME
-DB_PASSWORD = MSSQL_PASSWORD
-DB_CONNECTION_TIMEOUT = MSSQL_POOL_TIMEOUT
-DB_POOL_SIZE = MSSQL_POOL_SIZE
+# File constraints
+MAX_UPLOAD_SIZE_MB = _getint('upload', 'max_upload_size_mb', 10)
+MIN_IMAGE_WIDTH = _getint('upload', 'min_image_width', 640)
+MIN_IMAGE_HEIGHT = _getint('upload', 'min_image_height', 480)
+ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp']
+MAX_BATCH_SIZE = _getint('upload', 'max_batch_size', 50)
+
+# Processing options
+ENABLE_THUMBNAIL_GENERATION = _getboolean('upload', 'enable_thumbnail_generation', False)
+THUMBNAIL_SIZE = _getint('upload', 'thumbnail_size', 256)
+ENABLE_EXIF_EXTRACTION = _getboolean('upload', 'enable_exif_extraction', False)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # REID MODEL
