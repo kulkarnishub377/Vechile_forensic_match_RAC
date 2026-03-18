@@ -41,9 +41,9 @@ DATA_DIR = BASE_DIR / _get('paths', 'data_dir', 'data')
 LOGS_DIR = BASE_DIR / _get('paths', 'logs_dir', 'logs')
 
 # Image path mapping (for database image paths)
-ENABLE_PATH_MAPPING = _getboolean('paths', 'enable_path_mapping', True)
-PATH_MAPPING_SOURCE = _get('paths', 'path_mapping_source', 'E:\\_TrxMedia')
-PATH_MAPPING_TARGET = _get('paths', 'path_mapping_target', '\\\\192.50.20.13\\_TrxMedia')
+ENABLE_PATH_MAPPING = _getboolean('paths', 'enable_path_mapping', False)
+PATH_MAPPING_SOURCE = _get('paths', 'path_mapping_source', '')
+PATH_MAPPING_TARGET = _get('paths', 'path_mapping_target', '')
 
 def map_image_path(db_path: str) -> str:
     """
@@ -71,10 +71,10 @@ def map_image_path(db_path: str) -> str:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # DATABASE
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MSSQL_SERVER = _get('database', 'server', '192.50.20.15')
-MSSQL_DATABASE = _get('database', 'database', 'HTMS_EPE')
-MSSQL_USERNAME = _get('database', 'username', 'admin')
-MSSQL_PASSWORD = os.getenv('MSSQL_PASSWORD', 'WHOAMI@4PLACE')  # From environment
+MSSQL_SERVER = _get('database', 'server', '') or os.getenv('MSSQL_SERVER', '')
+MSSQL_DATABASE = _get('database', 'database', '') or os.getenv('MSSQL_DATABASE', '')
+MSSQL_USERNAME = _get('database', 'username', '') or os.getenv('MSSQL_USERNAME', '')
+MSSQL_PASSWORD = os.getenv('MSSQL_PASSWORD')  # REQUIRED: Set environment variable
 MSSQL_DRIVER = _get('database', 'driver', 'ODBC Driver 18 for SQL Server')
 MSSQL_TRUST_CERTIFICATE = _get('database', 'trust_certificate', 'yes')
 MSSQL_ENCRYPT = _get('database', 'encrypt', 'no')

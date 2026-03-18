@@ -17,17 +17,21 @@ MAX_WORKERS = 4
 TRAIN_RATIO = 0.90
 OUTPUT_DIR = "custom_vehicle_reid_dataset"
 
-# DATABASE CONFIG
-DB_SERVER = '192.50.20.15'
-DB_NAME = 'HTMS_EPE'
-DB_USER = 'admin'
-DB_PASS = 'WHOAMI@4PLACE'
-DB_DRIVER = 'ODBC Driver 18 for SQL Server'
+# DATABASE CONFIG (Load from environment variables)
+DB_SERVER = os.getenv('MSSQL_SERVER')
+DB_NAME = os.getenv('MSSQL_DATABASE')
+DB_USER = os.getenv('MSSQL_USERNAME')
+DB_PASS = os.getenv('MSSQL_PASSWORD')
+DB_DRIVER = os.getenv('MSSQL_DRIVER', 'ODBC Driver 18 for SQL Server')
+
+# Validate required environment variables
+if not all([DB_SERVER, DB_NAME, DB_USER, DB_PASS]):
+    raise ValueError("Missing required database credentials. Set: MSSQL_SERVER, MSSQL_DATABASE, MSSQL_USERNAME, MSSQL_PASSWORD")
 
 # PATH MAPPING CONFIG
-ENABLE_PATH_MAPPING = True
-PATH_MAPPING_SOURCE = 'E:\\_TrxMedia'
-PATH_MAPPING_TARGET = '\\\\192.50.20.13\\_TrxMedia'
+ENABLE_PATH_MAPPING = os.getenv('ENABLE_PATH_MAPPING', 'false').lower() == 'true'
+PATH_MAPPING_SOURCE = os.getenv('PATH_MAPPING_SOURCE', '')
+PATH_MAPPING_TARGET = os.getenv('PATH_MAPPING_TARGET', '')
 
 # YOLO MODEL PATH (Adjust based on your file structure)
 # Assuming models are relative to this script

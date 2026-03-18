@@ -52,11 +52,15 @@ MAX_WORKERS = 4
 BATCH_SIZE = 52
 
 # DATBASE
-DB_SERVER = '192.50.20.15'
-DB_PORT = '1433'
-DB_NAME = 'HTMS_EPE'
-DB_USER = 'admin'
-DB_PASS = 'WHOAMI@4PLACE'
+DB_SERVER = os.getenv('MSSQL_SERVER')
+DB_PORT = os.getenv('MSSQL_PORT', '1433')
+DB_NAME = os.getenv('MSSQL_DATABASE')
+DB_USER = os.getenv('MSSQL_USERNAME')
+DB_PASS = os.getenv('MSSQL_PASSWORD')
+
+# Validate required environment variables
+if not all([DB_SERVER, DB_NAME, DB_USER, DB_PASS]):
+    raise ValueError("Missing required database credentials. Set: MSSQL_SERVER, MSSQL_DATABASE, MSSQL_USERNAME, MSSQL_PASSWORD")
 DB_DRIVER = 'ODBC Driver 18 for SQL Server'
 
 # PATH MAPPING
