@@ -46,13 +46,18 @@ class MetadataManager:
         self,
         transaction_id: str,
         timestamp: datetime,
-        embedding_data: Dict
+        embedding_data: Dict,
+        image_path: Optional[str] = None,
+        original_filename: Optional[str] = None,
+        vehicle_type: Optional[str] = None,
+        file_size_bytes: Optional[int] = None,
+        image_dimensions: Optional[tuple] = None
     ):
         """
         Save metadata for single vehicle (thread-safe)
-        
+
         Args:
-            transaction_id: Transaction ID
+            transaction_id: Transaction ID (or unique_id for uploads)
             timestamp: Transaction timestamp
             embedding_data: Dict with keys:
                 - color_histogram: 2048-D array (saved as list)
@@ -62,6 +67,11 @@ class MetadataManager:
                 - plate_bbox: [x1, y1, x2, y2] or None
                 - aspect_ratio: float
                 - vehicle_confidence: float
+            image_path: Local path to image file (NEW - for uploads)
+            original_filename: Original uploaded filename (NEW)
+            vehicle_type: "entry" or "exit" (NEW)
+            file_size_bytes: Image file size in bytes (NEW)
+            image_dimensions: [width, height] (NEW)
         """
         try:
             partition_key = self._get_partition_key(timestamp)
