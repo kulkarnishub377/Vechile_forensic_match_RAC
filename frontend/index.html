@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Forensic Matching System - Internal Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=8899">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="light-theme">
+    <div class="container">
+        <!-- Simplified Header -->
+        <header class="header">
+            <div class="header-main">
+                <div class="header-brand">
+                    <div class="logo-section">
+                        <div class="logo-icon">
+                            🚗
+                        </div>
+                        <div class="brand-content">
+                            <h1 class="title">Vehicle Forensic Matching System <span class="pro-badge">PRO</span></h1>
+                            <p class="subtitle">Internal Testing & Monitoring Dashboard | VRN Matching • RANSAC ORB • Confidence Scoring</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <!-- Dark Mode Toggle -->
+                    <button id="themeToggle" class="btn btn-icon" title="Toggle Dark Mode">
+                        <i class="fas fa-moon" id="themeIcon"></i>
+                    </button>
+                    <!-- Auto Refresh Toggle -->
+                    <div class="auto-refresh-toggle">
+                        <label class="switch">
+                            <input type="checkbox" id="autoRefreshToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <span class="toggle-label">Auto-Refresh</span>
+                    </div>
+                    <div class="connection-status" role="status" aria-live="polite">
+                        <span class="status-indicator" id="statusIndicator" aria-hidden="true"></span>
+                        <span class="status-text" id="statusText">Checking...</span>
+                    </div>
+                    <button id="openApiModalBtn" class="btn btn-outline btn-small" aria-haspopup="dialog" aria-controls="apiModal" aria-expanded="false" title="Open API Documentation">
+                        <span class="icon book-icon" aria-hidden="true"></span> API Docs
+                    </button>
+                </div>
+            </div>
+        </header>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Row - Search and Basic Monitoring -->
+        <div class="top-row">
+            <div class="left-column">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>🔍 EXIT Vehicle Search</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="searchForm" role="search" aria-label="Exit vehicle search" aria-describedby="exitHelp">
+                            <div class="form-group">
+                                <label for="exitTxId"><span class="icon" aria-hidden="true">🆔</span> EXIT Transaction ID *</label>
+                                <input 
+                                    type="text" 
+                                    id="exitTxId" 
+                                    placeholder="TX_EXIT_123"
+                                    required
+                                    class="form-control"
+                                    aria-describedby="exitHelp"
+                                >
+                                <small id="exitHelp">Enter the EXIT transaction ID to find matching ENTRY vehicles</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="topK"><span class="icon" aria-hidden="true">🔢</span> Number of Matches (k)</label>
+                                <input 
+                                    type="number" 
+                                    id="topK" 
+                                    min="1" 
+                                    max="50" 
+                                    value="10"
+                                    class="form-control"
+                                >
+                                <small>Maximum: 50, Default: 10</small>
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <label>
+                                    <input type="checkbox" id="includeDetails" aria-label="Include detailed match information">
+                                    <span class="icon" aria-hidden="true">🧾</span> Include detailed match information
+                                </label>
+                            </div>
+
+                            <div class="info-box" role="note">
+                                <small>ℹ️ ORB keypoint verification is <strong>always enabled</strong> for maximum forensic accuracy</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" id="searchBtn">
+                                <span id="searchBtnText"><span class="icon" aria-hidden="true">🔎</span> Search Matches</span>
+                                <span id="searchBtnLoader" class="loader" style="display: none;"></span>
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Search Results -->
+                <section class="card" id="resultsCard" style="display: none;" role="region" aria-live="polite" aria-atomic="true" aria-labelledby="resultsHeading">
+                    <div class="card-header">
+                        <h2 id="resultsHeading">📊 Search Results</h2>
+                        <span class="badge" id="resultsBadge" role="status" aria-live="polite">0 matches</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="result-summary" id="resultSummary" role="status" aria-live="polite"></div>
+                        <div class="results-list" id="resultsList" role="region" aria-label="Search results"></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column - Enhanced System Monitoring -->
+            <div class="right-column">
+                <!-- System Health -->
+                <section class="card">
+                    <div class="card-header">
+                        <h2>💚 System Health</h2>
+                        <button id="refreshHealthBtn" class="btn btn-small" aria-label="Refresh system health"><span class="icon refresh-icon" aria-hidden="true"></span> Refresh <span id="refreshHealthLoader" class="loader" style="display:none; margin-left:8px; width:14px; height:14px;"></span></button>
+                    </div>
+                    <div class="card-body">
+                        <div id="healthContent" role="status" aria-live="polite">Loading...</div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Bottom Section - Performance Metrics and Admin Panel -->
+        <div class="bottom-section">
+            <!-- Performance Metrics Charts -->
+            <section class="card performance-charts-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-chart-line"></i> Performance Metrics & Analytics</h2>
+                    <div class="chart-controls">
+                        <select id="chartTimeRange" class="form-control form-control-sm">
+                            <option value="1h">Last Hour</option>
+                            <option value="6h">Last 6 Hours</option>
+                            <option value="24h" selected>Last 24 Hours</option>
+                            <option value="7d">Last 7 Days</option>
+                        </select>
+                        <button id="exportChartsBtn" class="btn btn-outline btn-small">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="charts-grid">
+                        <!-- Response Time Chart -->
+                        <div class="chart-container">
+                            <h4><i class="fas fa-clock"></i> Response Time Trend</h4>
+                            <canvas id="responseTimeChart"></canvas>
+                        </div>
+                        
+                        <!-- Search Requests Chart -->
+                        <div class="chart-container">
+                            <h4><i class="fas fa-search"></i> Search Requests Over Time</h4>
+                            <canvas id="searchRequestsChart"></canvas>
+                        </div>
+                        
+                        <!-- Success Rate Pie Chart -->
+                        <div class="chart-container">
+                            <h4><i class="fas fa-check-circle"></i> Success Rate Distribution</h4>
+                            <canvas id="successRateChart"></canvas>
+                        </div>
+                        
+                        <!-- Match Quality Distribution -->
+                        <div class="chart-container">
+                            <h4><i class="fas fa-chart-bar"></i> Match Similarity Distribution</h4>
+                            <canvas id="matchQualityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Performance Metrics - Horizontal Layout -->
+            <section class="card performance-card">
+                <div class="card-header">
+                    <h2>📈 System Metrics (Real-time)</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="metrics-horizontal-grid">
+                            <!-- CPU Metrics -->
+                            <div class="metric-group-horizontal">
+                                <h4>🖥️ CPU</h4>
+                                <div class="metric-content">
+                                    <div class="metric-main">
+                                        <div class="metric-value-large" id="cpuUsage">0%</div>
+                                        <div class="metric-bar">
+                                            <div class="metric-fill cpu-fill" id="cpuBar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-details">
+                                        <div class="metric-detail-item">
+                                            <span class="detail-label">Load</span>
+                                            <span class="detail-value" id="cpuLoad">0.00</span>
+                                        </div>
+                                        <div class="metric-detail-item">
+                                            <span class="detail-label">Temp</span>
+                                            <span class="detail-value" id="cpuTemp">--°C</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Memory Metrics -->
+                            <div class="metric-group-horizontal">
+                                <h4>🧠 Memory</h4>
+                                <div class="metric-content">
+                                    <div class="metric-main">
+                                        <div class="metric-value-large" id="memoryUsage">0%</div>
+                                        <div class="metric-bar">
+                                            <div class="metric-fill memory-fill" id="memoryBar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-details">
+                                        <div class="metric-detail-item">
+                                            <span class="detail-label">Used</span>
+                                            <span class="detail-value" id="memoryDetails">0MB / 0MB</span>
+                                        </div>
+                                        <div class="metric-detail-item">
+                                            <span class="detail-label">Swap</span>
+                                            <span class="detail-value" id="swapUsage">0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Disk Metrics -->
+                            <div class="metric-group-horizontal">
+                                <h4>💾 Disk</h4>
+                                <div class="metric-content">
+                                    <div class="metric-main">
+                                        <div class="metric-value-large" id="diskUsage">0%</div>
+                                        <div class="metric-bar">
+                                            <div class="metric-fill disk-fill" id="diskBar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-details">
+                                        <div class="metric-detail-item">
+                                            <span class="detail-label">Used</span>
+                                            <span class="detail-value" id="diskDetails">0GB / 0GB</span>
+                                        </div>
+                                        <div class="metric-detail-item">
+                                            <span class="detail-label">I/O</span>
+                                            <span class="detail-value" id="diskIO">0 ops/s</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Network Metrics -->
+                            <div class="metric-group-horizontal">
+                                <h4>🌐 Network</h4>
+                                <div class="metric-content">
+                                    <div class="metric-main">
+                                        <div class="metric-value-large" id="networkDown">0 MB/s</div>
+                                        <div class="metric-subtitle">Download</div>
+                                    </div>
+                                    <div class="metric-details">
+                                        <div class="metric-detail-item">
+                                            <span class="detail-label">Upload</span>
+                                            <span class="detail-value" id="networkUp">0 MB/s</span>
+                                        </div>
+                                        <div class="metric-detail-item">
+                                            <span class="detail-label">Conn</span>
+                                            <span class="detail-value" id="networkConn">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Application Metrics -->
+                            <div class="metric-group-horizontal">
+                                <h4>🚀 App</h4>
+                                <div class="metric-content">
+                                    <div class="metric-main">
+                                        <div class="metric-value-large" id="avgResponseTime">0ms</div>
+                                        <div class="metric-subtitle">Response Time</div>
+                                    </div>
+                                    <div class="metric-details">
+                                        <div class="metric-detail-item">
+                                            <span class="detail-label">Active</span>
+                                            <span class="detail-value" id="activeConnections">0</span>
+                                        </div>
+                                        <div class="metric-detail-item">
+                                            <span class="detail-label">Req/min</span>
+                                            <span class="detail-value" id="requestsPerMin">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="metricsContent" role="status" aria-live="polite" style="display: none;">Loading detailed metrics...</div>
+                    </div>
+                </section>
+
+                <!-- Vector Database Stats - Horizontal Layout -->
+                <section class="card vector-db-card">
+                    <div class="card-header">
+                        <h2>🗄️ Vector Database</h2>
+                        <div class="vector-controls">
+                            <button id="refreshVectorBtn" class="btn btn-small" aria-label="Refresh vector database stats">
+                                <span class="icon refresh-icon" aria-hidden="true"></span> Refresh
+                                <span id="refreshVectorLoader" class="loader" style="display:none; margin-left:8px; width:14px; height:14px;"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="vector-stats-horizontal">
+                            <div class="vector-stat-item">
+                                <div class="stat-icon">📊</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="totalVectors">0</div>
+                                    <div class="stat-label">Total Vectors</div>
+                                </div>
+                            </div>
+                            <div class="vector-stat-item">
+                                <div class="stat-icon">📏</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="vectorDimensions">0</div>
+                                    <div class="stat-label">Dimensions</div>
+                                </div>
+                            </div>
+                            <div class="vector-stat-item">
+                                <div class="stat-icon">💾</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="indexSize">0 MB</div>
+                                    <div class="stat-label">Index Size</div>
+                                </div>
+                            </div>
+                            <div class="vector-stat-item">
+                                <div class="stat-icon">⚡</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="avgQueryTime">0ms</div>
+                                    <div class="stat-label">Avg Query Time</div>
+                                </div>
+                            </div>
+                            <div class="vector-stat-item">
+                                <div class="stat-icon">🔍</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="totalQueries">0</div>
+                                    <div class="stat-label">Total Queries</div>
+                                </div>
+                            </div>
+                            <div class="vector-stat-item">
+                                <div class="stat-icon">📈</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="cacheHitRate">0%</div>
+                                    <div class="stat-label">Cache Hit Rate</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="vectorDbContent" role="status" aria-live="polite" style="display: none;">Loading detailed vector database stats...</div>
+                    </div>
+                </section>
+
+            <!-- Admin Control Panel -->
+            <section class="card admin-panel">
+                <div class="card-header admin-header">
+                    <h2>⚙️ Admin Control Panel</h2>
+                    <span class="admin-badge">AVAILABLE BACKEND FEATURES</span>
+                </div>
+                <div class="card-body">
+                    <!-- Admin Sections Grid - Limited to Available Backend Features -->
+                    <div class="admin-grid">
+                        <!-- Cache Management -->
+                        <div class="admin-section">
+                            <div class="section-header">
+                                <h3><span class="icon-badge cache">💾</span> Cache Management</h3>
+                                <span class="section-status" id="cacheStatus"></span>
+                            </div>
+                            <p class="section-description">Monitor Redis cache performance and clear stale data</p>
+                            <div class="section-actions">
+                                <button id="viewCacheStatsBtn" class="btn btn-outline btn-small">
+                                    <span class="icon">📊</span> View Stats
+                                </button>
+                                <button id="clearCacheBtn" class="btn btn-outline btn-small">
+                                    <span class="icon">🗑️</span> Clear All
+                                </button>
+                            </div>
+                            <div id="cacheStatsContent" class="section-content" style="display: none;"></div>
+                        </div>
+
+                        <!-- Circuit Breaker Management -->
+                        <div class="admin-section">
+                            <div class="section-header">
+                                <h3><span class="icon-badge circuit">🔌</span> Circuit Breaker</h3>
+                                <span class="section-status" id="circuitStatus"></span>
+                            </div>
+                            <p class="section-description">Database fault tolerance and recovery management</p>
+                            <div class="section-actions">
+                                <button id="viewCircuitBreakerStatusBtn" class="btn btn-outline btn-small">
+                                    <span class="icon">📊</span> View Status
+                                </button>
+                                <button id="resetCircuitBreakerBtn" class="btn btn-outline btn-small">
+                                    <span class="icon">🔄</span> Reset
+                                </button>
+                            </div>
+                            <div id="circuitBreakerContent" class="section-content" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions Grid -->
+                    <div class="quick-actions-section">
+                        <h3>⚡ Quick Actions</h3>
+                        <div class="quick-actions-grid">
+                            <button class="quick-action-btn" id="clearAllCaches">
+                                <span class="qa-icon">🧹</span>
+                                <span class="qa-label">Clear Cache</span>
+                            </button>
+                            <button class="quick-action-btn" id="viewCacheStats">
+                                <span class="qa-icon">📊</span>
+                                <span class="qa-label">Cache Stats</span>
+                            </button>
+                            <button class="quick-action-btn" id="resetCircuitBreaker">
+                                <span class="qa-icon">🔄</span>
+                                <span class="qa-label">Reset Circuit</span>
+                            </button>
+                            <button class="quick-action-btn" id="viewCircuitBreakerStatus">
+                                <span class="qa-icon">🔌</span>
+                                <span class="qa-label">Circuit Status</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+                <template id="apiDocsTemplate">
+                    <div class="api-docs">
+                        <div class="api-endpoint">
+                            <div class="api-endpoint-header">
+                                <div class="api-meta">
+                                    <span class="api-method post"><span class="icon" aria-hidden="true">📤</span> POST</span>
+                                    <span class="api-path">/search</span>
+                                </div>
+                                <div class="api-actions">
+                                    <button class="api-copy btn btn-outline" aria-label="Copy endpoint /search"><span class="icon copy-icon" aria-hidden="true"></span>Copy</button>
+                                    <button class="api-toggle btn btn-icon" aria-expanded="false" aria-controls="api-details-search"><span class="icon toggle-emoji" aria-hidden="true"></span></button>
+                                </div>
+                            </div>
+                            <div class="api-description">Search for matching ENTRY vehicles</div>
+                            <div class="api-details" id="api-details-search">
+                                <strong>Request Body:</strong>
+                                <pre>{
+"exit_transaction_id": "TX_EXIT_123",
+"k": 10  // optional, default: 10
+}
+                                </pre>
+                                <strong>Response:</strong>
+                                <pre>{
+    "exit_transaction_id": "TX_EXIT_123",
+    "matched_entry_transaction_ids": ["TX_ENTRY_101", "TX_ENTRY_205"],
+    "matches_found": 2,
+    ],
+    "processing_time_seconds": 0.234
+}</pre>
+                            </div>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <div class="api-endpoint-header">
+                                <div class="api-meta">
+                                    <span class="api-method get"><span class="icon" aria-hidden="true">🔎</span> GET</span>
+                                    <span class="api-path">/health</span>
+                                </div>
+                                <div class="api-actions">
+                                    <button class="api-copy btn btn-outline" aria-label="Copy endpoint /health"><span class="icon copy-icon" aria-hidden="true"></span> Copy</button>
+                                    <button class="api-toggle btn btn-icon" aria-expanded="false" aria-controls="api-details-health"><span class="icon toggle-emoji" aria-hidden="true"></span></button>
+                                </div>
+                            </div>
+                            <div class="api-description">Check system health status</div>
+                            <div class="api-details" id="api-details-health">
+                                <strong>Parameters:</strong>
+                                <pre>No parameters required</pre>
+                                <strong>Response:</strong>
+                                <pre>{
+    "status": "healthy",
+    "version": "1.0.0",
+    "embedding_version": "v1.0",
+    "database_ok": true,
+    "vector_db_stats": {
+        "total_entries": 1000,
+        "memory_usage": "50MB"
+    }
+}</pre>
+                            </div>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <div class="api-endpoint-header">
+                                <div class="api-meta">
+                                    <span class="api-method get"><span class="icon" aria-hidden="true">🔎</span> GET</span>
+                                    <span class="api-path">/metrics</span>
+                                </div>
+                                <div class="api-actions">
+                                    <button class="api-copy btn btn-outline" aria-label="Copy endpoint /metrics"><span class="icon copy-icon" aria-hidden="true"></span> Copy</button>
+                                    <button class="api-toggle btn btn-icon" aria-expanded="false" aria-controls="api-details-metrics"><span class="icon toggle-emoji" aria-hidden="true"></span></button>
+                                </div>
+                            </div>
+                            <div class="api-description">Get performance metrics and statistics</div>
+                            <div class="api-details" id="api-details-metrics">
+                                <strong>Parameters:</strong>
+                                <pre>No parameters required</pre>
+                                <strong>Response:</strong>
+                                <pre>{
+    "system_metrics": {
+        "cpu_percent": 15.2,
+        "memory_mb": 245.8,
+        "memory_percent": 12.5,
+        "threads": 8,
+        "open_files": 15
+    },
+    "database_status": {
+        "connected": true,
+        "last_check": "2024-01-15T10:30:00Z"
+    },
+    "search_metrics_last_60min": {
+        "total_requests": 45,
+        "avg_processing_time": 0.234,
+        "success_rate": 0.98
+    },
+    "vector_db_stats": {
+        "total_entries": 1000,
+        "memory_usage": "50MB"
+    }
+}</pre>
+                            </div>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <div class="api-endpoint-header">
+                                <div class="api-meta">
+                                    <span class="api-method get"><span class="icon" aria-hidden="true">🔎</span> GET</span>
+                                    <span class="api-path">/stats</span>
+                                </div>
+                                <div class="api-actions">
+                                    <button class="api-copy btn btn-outline" aria-label="Copy endpoint /stats"><span class="icon copy-icon" aria-hidden="true"></span> Copy</button>
+                                    <button class="api-toggle btn btn-icon" aria-expanded="false" aria-controls="api-details-stats"><span class="icon toggle-emoji" aria-hidden="true"></span></button>
+                                </div>
+                            </div>
+                            <div class="api-description">Get transaction statistics (24h)</div>
+                            <div class="api-details" id="api-details-stats">
+                                <strong>Parameters:</strong>
+                                <pre>No parameters required</pre>
+                                <strong>Response:</strong>
+                                <pre>{
+    "total_entry_transactions_24h": 150,
+    "total_exit_transactions_24h": 75,
+    "vector_db_stats": {
+        "total_entries": 1000,
+        "memory_usage": "50MB"
+    }
+}</pre>
+                            </div>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <div class="api-endpoint-header">
+                                <div class="api-meta">
+                                    <span class="api-method get"><span class="icon" aria-hidden="true">⚙️</span> GET</span>
+                                    <span class="api-path">/cache/stats</span>
+                                </div>
+                                <div class="api-actions">
+                                    <button class="api-copy btn btn-outline" aria-label="Copy endpoint /cache/stats"><span class="icon copy-icon" aria-hidden="true"></span> Copy</button>
+                                    <button class="api-toggle btn btn-icon" aria-expanded="false" aria-controls="api-details-cache-stats"><span class="icon toggle-emoji" aria-hidden="true"></span></button>
+                                </div>
+                            </div>
+                            <div class="api-description">Get cache statistics (Admin)</div>
+                            <div class="api-details" id="api-details-cache-stats">
+                                <strong>Parameters:</strong>
+                                <pre>No parameters required</pre>
+                                <strong>Response:</strong>
+                                <pre>{
+    "enabled": true,
+    "total_entries": 150,
+    "memory_usage": "25MB",
+    "hit_rate": 0.85,
+    "miss_rate": 0.15,
+    "hits": 120,
+    "misses": 30
+}</pre>
+                            </div>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <div class="api-endpoint-header">
+                                <div class="api-meta">
+                                    <span class="api-method post"><span class="icon" aria-hidden="true">⚙️</span> POST</span>
+                                    <span class="api-path">/cache/clear</span>
+                                </div>
+                                <div class="api-actions">
+                                    <button class="api-copy btn btn-outline" aria-label="Copy endpoint /cache/clear"><span class="icon copy-icon" aria-hidden="true"></span> Copy</button>
+                                    <button class="api-toggle btn btn-icon" aria-expanded="false" aria-controls="api-details-cache-clear"><span class="icon toggle-emoji" aria-hidden="true"></span></button>
+                                </div>
+                            </div>
+                            <div class="api-description">Clear all cached data (Admin)</div>
+                            <div class="api-details" id="api-details-cache-clear">
+                                <strong>Request Body:</strong>
+                                <pre>No request body required</pre>
+                                <strong>Response:</strong>
+                                <pre>{ "status": "success", "message": "Cache cleared" }</pre>
+                            </div>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <div class="api-endpoint-header">
+                                <div class="api-meta">
+                                    <span class="api-method get"><span class="icon" aria-hidden="true">⚙️</span> GET</span>
+                                    <span class="api-path">/circuit-breaker/status</span>
+                                </div>
+                                <div class="api-actions">
+                                    <button class="api-copy btn btn-outline" aria-label="Copy endpoint /circuit-breaker/status"><span class="icon copy-icon" aria-hidden="true"></span> Copy</button>
+                                    <button class="api-toggle btn btn-icon" aria-expanded="false" aria-controls="api-details-cb-status"><span class="icon toggle-emoji" aria-hidden="true"></span></button>
+                                </div>
+                            </div>
+                            <div class="api-description">Get circuit breaker status (Admin)</div>
+                            <div class="api-details" id="api-details-cb-status">
+                                <strong>Parameters:</strong>
+                                <pre>No parameters required</pre>
+                                <strong>Response:</strong>
+                                <pre>{
+    "circuit_breakers": {
+        "database": {
+            "state": "CLOSED",
+            "failure_count": 0,
+            "success_count": 25,
+            "last_failure": null
+        }
+    }
+}</pre>
+                            </div>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <div class="api-endpoint-header">
+                                <div class="api-meta">
+                                    <span class="api-method post"><span class="icon" aria-hidden="true">⚙️</span> POST</span>
+                                    <span class="api-path">/circuit-breaker/reset/{service_name}</span>
+                                </div>
+                                <div class="api-actions">
+                                    <button class="api-copy btn btn-outline" aria-label="Copy endpoint /circuit-breaker/reset"><span class="icon copy-icon" aria-hidden="true"></span> Copy</button>
+                                    <button class="api-toggle btn btn-icon" aria-expanded="false" aria-controls="api-details-cb-reset"><span class="icon toggle-emoji" aria-hidden="true"></span></button>
+                                </div>
+                            </div>
+                            <div class="api-description">Reset circuit breaker (Admin)</div>
+                            <div class="api-details" id="api-details-cb-reset">
+                                <strong>Path Parameters:</strong>
+                                <pre>service_name: string (e.g., "database")</pre>
+                                <strong>Request Body:</strong>
+                                <pre>No request body required</pre>
+                                <strong>Response:</strong>
+                                <pre>{
+    "status": "success",
+    "message": "Circuit breaker reset for database",
+    "state": {
+        "state": "CLOSED",
+        "failure_count": 0,
+        "success_count": 0,
+        "last_failure": null
+    }
+}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </template>            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Vehicle Forensic Matching System v1.0.0 | Internal Use Only | Last Updated: <span id="lastUpdate">-</span></p>
+        </footer>
+    </div>
+
+
+
+    <!-- API Docs Modal -->
+    <div class="api-modal" id="apiModal" role="dialog" aria-modal="true" aria-labelledby="apiModalTitle" hidden>
+        <div class="api-modal-overlay" id="apiModalOverlay"></div>
+        <div class="api-modal-content" role="document" aria-describedby="apiModalBody">
+            <div class="api-modal-header">
+                <h2 id="apiModalTitle">📚 API Documentation</h2>
+                <div class="api-modal-controls">
+                    <button id="apiModalExpandAll" class="btn btn-small">🔽 Expand all</button>
+                    <button id="apiModalCollapseAll" class="btn btn-small">🔼 Collapse all</button>
+                    <button id="closeApiModalBtn" class="btn btn-icon" aria-label="Close API documentation">✖️</button>
+                </div>
+            </div>
+            <div class="api-modal-body" id="apiModalBody" tabindex="-1" role="region" aria-live="polite">
+                <!-- API docs are cloned here on open -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Lightbox Modal with Navigation -->
+    <div id="imageLightbox" class="lightbox-modal" style="display: none;">
+        <div class="lightbox-overlay" onclick="closeLightbox()"></div>
+        <div class="lightbox-content">
+            <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close image">&times;</button>
+            
+            <!-- Navigation buttons -->
+            <button id="lightboxPrevBtn" class="lightbox-nav lightbox-prev" onclick="navigateLightboxPrev()" aria-label="Previous image" style="display: none;">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button id="lightboxNextBtn" class="lightbox-nav lightbox-next" onclick="navigateLightboxNext()" aria-label="Next image" style="display: none;">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            
+            <img id="lightboxImage" src="" alt="Vehicle Image">
+            
+            <div class="lightbox-info">
+                <span id="lightboxTxId"></span>
+                <span id="lightboxTimestamp"></span>
+                <span id="lightboxCounter" class="lightbox-counter" style="display: none;"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel" class="settings-panel" style="display: none;">
+        <div class="settings-overlay" onclick="closeSettings()"></div>
+        <div class="settings-content">
+            <div class="settings-header">
+                <h2><i class="fas fa-cog"></i> Matching Settings</h2>
+                <button class="settings-close" onclick="closeSettings()" aria-label="Close settings">&times;</button>
+            </div>
+            
+            <div class="settings-body">
+                <div class="settings-section">
+                    <h3>Quality Settings</h3>
+                    
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <span class="setting-name">ORB Verification</span>
+                            <span class="setting-desc">Structural keypoint matching for accuracy</span>
+                        </label>
+                        <label class="switch">
+                            <input type="checkbox" id="settingEnableOrb" checked onchange="updateSettings()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <span class="setting-name">Minimum Similarity Score</span>
+                            <span class="setting-desc">Threshold for accepting matches (0.0 - 1.0)</span>
+                        </label>
+                        <div class="setting-slider">
+                            <input type="range" id="settingMinSimilarity" min="0.3" max="0.9" step="0.05" value="0.55" oninput="updateSettings(); updateSliderLabel('settingMinSimilarity', this.value)">
+                            <span class="slider-value" id="settingMinSimilarityValue">0.55</span>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <span class="setting-name">Minimum ORB Matches</span>
+                            <span class="setting-desc">Keypoints required for verification</span>
+                        </label>
+                        <div class="setting-slider">
+                            <input type="range" id="settingMinOrbMatches" min="5" max="20" step="1" value="8" oninput="updateSettings(); updateSliderLabel('settingMinOrbMatches', this.value)">
+                            <span class="slider-value" id="settingMinOrbMatchesValue">8</span>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <span class="setting-name">Top K Results</span>
+                            <span class="setting-desc">Maximum number of matches to return</span>
+                        </label>
+                        <div class="setting-slider">
+                            <input type="range" id="settingTopK" min="5" max="50" step="5" value="10" oninput="updateSettings(); updateSliderLabel('settingTopK', this.value); document.getElementById('topK').value = this.value;">
+                            <span class="slider-value" id="settingTopKValue">10</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Actions</h3>
+                    <button class="btn btn-primary" onclick="resetSettings()">
+                        <i class="fas fa-undo"></i> Reset to Defaults
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Button (Floating) -->
+    <button id="settingsBtn" class="settings-btn" onclick="openSettings()" title="Matching Settings">
+        <i class="fas fa-cog"></i>
+    </button>
+
+    <script src="/static/js/app.js?v=8899"></script>
+</body>
+</html> 
