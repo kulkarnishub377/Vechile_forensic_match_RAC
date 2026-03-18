@@ -40,34 +40,6 @@ MODELS_DIR = BASE_DIR / _get('paths', 'models_dir', 'models')
 DATA_DIR = BASE_DIR / _get('paths', 'data_dir', 'data')
 LOGS_DIR = BASE_DIR / _get('paths', 'logs_dir', 'logs')
 
-# Image path mapping (for database image paths)
-ENABLE_PATH_MAPPING = _getboolean('paths', 'enable_path_mapping', False)
-PATH_MAPPING_SOURCE = _get('paths', 'path_mapping_source', '')
-PATH_MAPPING_TARGET = _get('paths', 'path_mapping_target', '')
-
-def map_image_path(db_path: str) -> str:
-    """
-    Map image path from database to actual accessible path
-    
-    Args:
-        db_path: Path from database (e.g., E:\\_TrxMedia\\2026\\02\\image.jpg)
-    
-    Returns:
-        Mapped path (e.g., \\\\192.50.20.13\\_TrxMedia\\2026\\02\\image.jpg)
-    """
-    if not ENABLE_PATH_MAPPING:
-        return db_path
-    
-    if not db_path:
-        return db_path
-    
-    # Replace source path with target path
-    if PATH_MAPPING_SOURCE in db_path:
-        mapped_path = db_path.replace(PATH_MAPPING_SOURCE, PATH_MAPPING_TARGET)
-        return mapped_path
-    
-    return db_path
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # UPLOAD CONFIGURATION (NEW - Standalone System)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
