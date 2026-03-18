@@ -283,6 +283,102 @@ class MetadataManager:
         
         return results
 
+    def get_metadata_by_id(self, unique_id: str) -> Optional[Dict]:
+        """
+        Get metadata by unique_id without requiring timestamp
+
+        NEW METHOD: Searches across all partition files to find the ID.
+        Less efficient than get_metadata() but necessary when timestamp is unknown.
+        Caches loaded partitions for performance.
+
+        Args:
+            unique_id: Unique ID (transaction_id or upload ID)
+
+        Returns:
+            Metadata dict or None if not found
+        """
+        try:
+            # First check cache
+            for partition_key, partition_data in self.cache.items():
+                if unique_id in partition_data:
+                    return partition_data[unique_id]
+
+            # Search all partition files
+            for metadata_path in sorted(self.metadata_dir.glob("*.json"), reverse=True):
+                # Skip corrupted backups
+                if 'corrupted' in metadata_path.stem:
+                    continue
+
+                try:
+                    partition_key = metadata_path.stem  # YYYY-MM-DD
+
+                    # Skip if already cached
+                    if partition_key in self.cache:
+                        continue
+
+                    with open(metadata_path, 'r', encoding='utf-8') as f:
+                        partition_data = json.load(f)
+
+                    # Cache this partition
+                    self.cache[partition_key] = partition_data
+
+                    # Check if ID exists
+                    if unique_id in partition_data:
+                        return partition_data[unique_id]
+
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Corrupted metadata file {metadata_path.name}: {e}")
+                    continue
+                except Exception as e:
+                    logger.warning(f"Error reading metadata file {metadata_path.name}: {e}")
+                    continue
+
+            # Not found
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to search metadata by ID {unique_id}: {e}")
+            return None
+
+    def get_all_ids(self, vehicle_type: Optional[str] = None) -> List[str]:
+        """
+        Get all unique IDs from all partitions
+
+        Args:
+            vehicle_type: Optional filter by "entry" or "exit"
+
+        Returns:
+            List of unique IDs
+        """
+        try:
+            all_ids = []
+
+            # Load all partitions
+            for metadata_path in sorted(self.metadata_dir.glob("*.json")):
+                if 'corrupted' in metadata_path.stem:
+                    continue
+
+                try:
+                    with open(metadata_path, 'r', encoding='utf-8') as f:
+                        partition_data = json.load(f)
+
+                    # Filter by vehicle type if specified
+                    for uid, metadata in partition_data.items():
+                        if vehicle_type is None:
+                            all_ids.append(uid)
+                        elif metadata.get('vehicle_type') == vehicle_type:
+                            all_ids.append(uid)
+
+                except Exception as e:
+                    logger.warning(f"Error reading {metadata_path.name}: {e}")
+                    continue
+
+            return all_ids
+
+        except Exception as e:
+            logger.error(f"Failed to get all IDs: {e}")
+            return []
+
 
 # Global metadata manager
 _metadata_manager = None
