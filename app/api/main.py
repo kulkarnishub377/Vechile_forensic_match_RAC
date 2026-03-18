@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import logging
 from pathlib import Path
 
-from .routes import search, health
+from .routes import search, health, upload, image
 from .. import config
 
 logging.basicConfig(
@@ -39,6 +39,8 @@ app.add_middleware(
 app.include_router(search.router)  # /api/search endpoints
 app.include_router(search.router_no_prefix)  # /search endpoints (no prefix)
 app.include_router(health.router)
+app.include_router(upload.router)  # NEW - /api/upload endpoints
+app.include_router(image.router)   # NEW - /api/image/{unique_id} endpoint (CRITICAL!)
 
 # Mount static files BEFORE catch-all
 frontend_dir = Path(__file__).parent.parent.parent / 'frontend'
