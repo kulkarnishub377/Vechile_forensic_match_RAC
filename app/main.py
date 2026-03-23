@@ -140,7 +140,7 @@ async def upload_image(
         # Add to search index (SearchEngine Service)
         search_engine.add_to_index(image_id, embedding)
         
-        logger.info(f"✓ Image uploaded: {image_id} | Session: {session_id[:8]}...")
+        logger.info(f"Image uploaded: {image_id} | Session: {session_id[:8]}...")
         
         return {
             "success": True,
@@ -230,7 +230,7 @@ async def search_vehicle(
         
         results = sorted(results, key=lambda x: x["match_score"], reverse=True)
         
-        logger.info(f"✓ Search completed: {len(results)} matches in {search_time:.1f}ms")
+        logger.info(f"Search completed: {len(results)} matches in {search_time:.1f}ms")
         
         return {
             "success": True,
@@ -357,7 +357,7 @@ async def shutdown():
     logger.info("Shutting down services...")
     image_storage.cleanup()
     search_engine.cleanup()
-    logger.info("✓ All services shutdown")
+    logger.info("All services shutdown")
 
 if __name__ == "__main__":
     import uvicorn
