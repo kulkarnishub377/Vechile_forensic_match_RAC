@@ -1,5 +1,5 @@
 """
-Vehicle Re-Identification System
+🚗 Vehicle Re-Identification System
 Single Unified Service - Image Upload + Real-time Matching
 No Database Required - All In-Memory Processing
 """
@@ -8,6 +8,7 @@ from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZIPMiddleware
 import uuid
 import time
 import logging
@@ -35,9 +36,9 @@ logger = logging.getLogger(__name__)
 
 # FastAPI App
 app = FastAPI(
-    title="Vehicle Re-Identification System",
+    title="🚗 Vehicle Re-Identification System",
     description="Image-Based Vehicle Matching (No Database)",
-    version="1.0.0"
+    version="2.0.0"
 )
 
 # CORS Middleware
@@ -48,6 +49,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZIP Compression
+app.add_middleware(GZIPMiddleware, minimum_size=1000)
 
 # Static Files (Frontend)
 frontend_dir = Path(__file__).parent.parent / "frontend"
@@ -75,7 +79,7 @@ async def root():
     """Serve main frontend"""
     index_path = frontend_dir / "index.html"
     if index_path.exists():
-        with open(index_path, encoding='utf-8') as f:
+        with open(index_path) as f:
             return f.read()
     return "<h1>Frontend not found</h1>"
 
@@ -140,7 +144,7 @@ async def upload_image(
         # Add to search index (SearchEngine Service)
         search_engine.add_to_index(image_id, embedding)
         
-        logger.info(f"Image uploaded: {image_id} | Session: {session_id[:8]}...")
+        logger.info(f"✓ Image uploaded: {image_id} | Session: {session_id[:8]}...")
         
         return {
             "success": True,
@@ -230,7 +234,7 @@ async def search_vehicle(
         
         results = sorted(results, key=lambda x: x["match_score"], reverse=True)
         
-        logger.info(f"Search completed: {len(results)} matches in {search_time:.1f}ms")
+        logger.info(f"✓ Search completed: {len(results)} matches in {search_time:.1f}ms")
         
         return {
             "success": True,
@@ -286,7 +290,7 @@ async def clear_session(session_id: str):
         session_manager.clear_session(session_id)
         search_engine.clear_session_index(session_id)
         
-        logger.info(f"Session cleared: {session_id[:8]}...")
+        logger.info(f"✓ Session cleared: {session_id[:8]}...")
         
         return {
             "success": True,
@@ -314,7 +318,7 @@ async def health():
         "models_ready": vehicle_detector.ready and embedding_generator.ready,
         "active_sessions": session_manager.get_active_count(),
         "total_images_indexed": search_engine.get_index_size(),
-        "version": "1.0.0"
+        "version": "2.0.0"
     }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -325,28 +329,28 @@ async def health():
 async def startup():
     """Initialize all services on startup"""
     logger.info("=" * 60)
-    logger.info("Vehicle Re-ID System Starting (No Database Mode)")
+    logger.info("🚗 Vehicle Re-ID System Starting (No Database Mode)")
     logger.info("=" * 60)
-
+    
     try:
         logger.info("Loading YOLO detector...")
         vehicle_detector.initialize()
-        logger.info("YOLO detector ready")
-
+        logger.info("✓ YOLO detector ready")
+        
         logger.info("Loading OSNet-AIN embedder...")
         embedding_generator.initialize()
-        logger.info("OSNet-AIN embedder ready")
-
+        logger.info("✓ OSNet-AIN embedder ready")
+        
         logger.info("Initializing FAISS search...")
         search_engine.initialize()
-        logger.info("FAISS search ready")
-
+        logger.info("✓ FAISS search ready")
+        
         logger.info("=" * 60)
-        logger.info("All services initialized successfully")
-        logger.info("API available at: http://localhost:8000")
-        logger.info("Documentation at: http://localhost:8000/docs")
+        logger.info("✓ All services initialized successfully")
+        logger.info("🌐 API available at: http://localhost:8000")
+        logger.info("📖 Documentation at: http://localhost:8000/docs")
         logger.info("=" * 60)
-
+    
     except Exception as e:
         logger.error(f"Startup error: {str(e)}")
         raise
@@ -357,7 +361,7 @@ async def shutdown():
     logger.info("Shutting down services...")
     image_storage.cleanup()
     search_engine.cleanup()
-    logger.info("All services shutdown")
+    logger.info("✓ All services shutdown")
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,109 +1,97 @@
 """
 Vehicle Detector Service
-Simple wrapper using Ultralytics YOLO with auto-download
+YOLO-based vehicle detection
 """
+import torch
 import cv2
 import numpy as np
 import logging
-import os
-from typing import Dict, Any, Optional
+from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
 class VehicleDetector:
-    """Simple vehicle detector using Ultralytics YOLO"""
-
+    """Detect vehicles in images using YOLOv5"""
+    
     def __init__(self):
         self.model = None
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.ready = False
-        # Vehicle classes in COCO dataset
-        self.vehicle_classes = [2, 3, 5, 7]  # car, motorcycle, bus, truck
-
+    
     def initialize(self):
-        """Load YOLO model - try custom model first, fallback to auto-download"""
+        """Load YOLO model"""
         try:
-            logger.info("Loading YOLO detector...")
-
-            # Import here to avoid startup delays
-            from ultralytics import YOLO
-
-            # Try custom model first (better accuracy for vehicles)
-            custom_model_path = "models/yolov5_sites_vehicle_v2.pt"
-            if os.path.exists(custom_model_path):
-                logger.info(f"Loading custom vehicle model: {custom_model_path}")
-                self.model = YOLO(custom_model_path)
-                logger.info("Custom YOLO model loaded (better vehicle accuracy)")
-            else:
-                # Fallback to auto-download
-                logger.info("Custom model not found, using auto-download YOLOv8n...")
-                self.model = YOLO('yolov8n.pt')
-                logger.info("Standard YOLO model loaded")
-
+            logger.info(f"Loading YOLOv5 on device: {self.device}")
+            self.model = torch.hub.load(
+                'ultralytics/yolov5',
+                'yolov5n',
+                pretrained=True
+            )
+            self.model.to(self.device)
+            self.model.conf = 0.5
             self.ready = True
-            logger.info("YOLO detector ready")
-
+            logger.info("✓ YOLOv5 loaded successfully")
         except Exception as e:
             logger.error(f"Failed to load YOLO: {str(e)}")
             self.ready = False
             raise
-
-    def detect(self, image_id: str, image_data: bytes) -> Dict[str, Any]:
+    
+    def detect(self, image_id: str, image_data: bytes) -> Dict:
         """
         Detect vehicles in image
-        Returns: {"success": bool, "vehicle_region": np.ndarray, "confidence": float}
+        Returns dict with detection results
         """
         try:
             if not self.ready:
-                return {"success": False, "error": "Model not loaded"}
-
-            # Convert bytes to image
+                return {"success": False, "error": "Model not initialized"}
+            
+            # Decode image from bytes
             nparr = np.frombuffer(image_data, np.uint8)
             image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
+            
             if image is None:
-                return {"success": False, "error": "Invalid image"}
-
-            # Run YOLO detection
-            results = self.model(image, verbose=False)
-
-            best_vehicle = None
-            best_confidence = 0.0
-
-            # Find best vehicle detection
-            for r in results:
-                boxes = r.boxes
-                if boxes is not None:
-                    for i in range(len(boxes)):
-                        cls = int(boxes.cls[i])
-                        conf = float(boxes.conf[i])
-
-                        # Check if it's a vehicle class
-                        if cls in self.vehicle_classes and conf > best_confidence:
-                            x1, y1, x2, y2 = boxes.xyxy[i].cpu().numpy().astype(int)
-
-                            # Extract vehicle region with padding
-                            padding = 10
-                            h, w = image.shape[:2]
-                            x1 = max(0, x1 - padding)
-                            y1 = max(0, y1 - padding)
-                            x2 = min(w, x2 + padding)
-                            y2 = min(h, y2 + padding)
-
-                            vehicle_region = image[y1:y2, x1:x2]
-
-                            if vehicle_region.size > 0:
-                                best_vehicle = vehicle_region
-                                best_confidence = conf
-
-            if best_vehicle is not None:
-                return {
-                    "success": True,
-                    "vehicle_region": best_vehicle,
-                    "confidence": round(best_confidence, 3)
-                }
-            else:
+                return {"success": False, "error": "Failed to decode image"}
+            
+            # Run YOLO inference
+            results = self.model(image)
+            
+            # Extract vehicle detections (COCO: car=2, truck=7, bus=5)
+            detections = []
+            for *box, conf, cls in results.xyxy[0]:
+                if int(cls) in [2, 5, 7]:  # vehicle classes
+                    detections.append({
+                        "box": [float(x) for x in box],
+                        "confidence": float(conf),
+                        "class": int(cls)
+                    })
+            
+            if len(detections) == 0:
+                logger.warning(f"No vehicles detected in {image_id[:8]}...")
                 return {"success": False, "error": "No vehicle detected"}
-
+            
+            # Use best detection
+            best = max(detections, key=lambda x: x["confidence"])
+            x1, y1, x2, y2 = map(int, best["box"])
+            
+            # Add padding and crop
+            padding = 20
+            x1 = max(0, x1 - padding)
+            y1 = max(0, y1 - padding)
+            x2 = min(image.shape[1], x2 + padding)
+            y2 = min(image.shape[0], y2 + padding)
+            
+            vehicle_region = image[y1:y2, x1:x2]
+            
+            logger.info(f"✓ Vehicle detected: {image_id[:8]}... (conf: {best['confidence']:.2f})")
+            
+            return {
+                "success": True,
+                "vehicle_region": vehicle_region,
+                "confidence": best["confidence"],
+                "bbox": [x1, y1, x2, y2],
+                "original_image": image
+            }
+        
         except Exception as e:
-            logger.error(f"Detection error for {image_id}: {str(e)}")
+            logger.error(f"Detection error: {str(e)}")
             return {"success": False, "error": str(e)}
