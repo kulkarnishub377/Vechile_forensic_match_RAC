@@ -5,6 +5,7 @@ Simple wrapper using Ultralytics YOLO with auto-download
 import cv2
 import numpy as np
 import logging
+import os
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -19,17 +20,26 @@ class VehicleDetector:
         self.vehicle_classes = [2, 3, 5, 7]  # car, motorcycle, bus, truck
 
     def initialize(self):
-        """Load YOLO model with auto-download"""
+        """Load YOLO model - try custom model first, fallback to auto-download"""
         try:
-            logger.info("Loading YOLO with auto-download...")
+            logger.info("Loading YOLO detector...")
 
             # Import here to avoid startup delays
             from ultralytics import YOLO
 
-            # Auto-download YOLOv8n (3MB, very fast)
-            self.model = YOLO('yolov8n.pt')
-            self.ready = True
+            # Try custom model first (better accuracy for vehicles)
+            custom_model_path = "models/yolov5_sites_vehicle_v2.pt"
+            if os.path.exists(custom_model_path):
+                logger.info(f"Loading custom vehicle model: {custom_model_path}")
+                self.model = YOLO(custom_model_path)
+                logger.info("Custom YOLO model loaded (better vehicle accuracy)")
+            else:
+                # Fallback to auto-download
+                logger.info("Custom model not found, using auto-download YOLOv8n...")
+                self.model = YOLO('yolov8n.pt')
+                logger.info("Standard YOLO model loaded")
 
+            self.ready = True
             logger.info("YOLO detector ready")
 
         except Exception as e:

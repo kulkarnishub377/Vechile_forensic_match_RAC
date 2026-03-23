@@ -8,6 +8,7 @@ import torchvision.transforms as transforms
 import cv2
 import numpy as np
 import logging
+import os
 from typing import Optional
 from PIL import Image
 
@@ -23,19 +24,35 @@ class EmbeddingGenerator:
         self.ready = False
 
     def initialize(self):
-        """Load OSNet-AIN model with auto-download"""
+        """Load OSNet-AIN model - try custom model first, fallback to auto-download"""
         try:
-            logger.info("Loading OSNet-AIN with TorchReID auto-download...")
+            logger.info("Loading OSNet-AIN embedder...")
 
             # Import TorchReID
             import torchreid
 
-            # Auto-download OSNet-AIN model
-            self.model = torchreid.models.build_model(
-                name='osnet_ain_x1_0',
-                num_classes=1000,  # ImageNet pretraining
-                pretrained=True
-            )
+            # Try custom model first
+            custom_model_path = "models/osnet_ain_x1_0_imagenet.pth"
+            if os.path.exists(custom_model_path):
+                logger.info(f"Loading custom OSNet model: {custom_model_path}")
+                # Load custom model
+                self.model = torchreid.models.build_model(
+                    name='osnet_ain_x1_0',
+                    num_classes=1000,
+                    pretrained=False  # Don't auto-download
+                )
+                # Load custom weights
+                self.model.load_state_dict(torch.load(custom_model_path, map_location=self.device))
+                logger.info("Custom OSNet model loaded (potentially better accuracy)")
+            else:
+                # Fallback to auto-download
+                logger.info("Custom model not found, using auto-download...")
+                self.model = torchreid.models.build_model(
+                    name='osnet_ain_x1_0',
+                    num_classes=1000,
+                    pretrained=True  # Auto-download
+                )
+                logger.info("Standard OSNet model loaded")
 
             self.model.to(self.device)
             self.model.eval()

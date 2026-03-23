@@ -75,7 +75,7 @@ async def root():
     """Serve main frontend"""
     index_path = frontend_dir / "index.html"
     if index_path.exists():
-        with open(index_path) as f:
+        with open(index_path, encoding='utf-8') as f:
             return f.read()
     return "<h1>Frontend not found</h1>"
 
