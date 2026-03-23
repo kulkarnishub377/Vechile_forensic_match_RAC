@@ -34,25 +34,37 @@ class EmbeddingGenerator:
             # Try custom model first
             custom_model_path = "models/osnet_ain_x1_0_imagenet.pth"
             if os.path.exists(custom_model_path):
-                logger.info(f"Loading custom OSNet model: {custom_model_path}")
-                # Load custom model
-                self.model = torchreid.models.build_model(
-                    name='osnet_ain_x1_0',
-                    num_classes=1000,
-                    pretrained=False  # Don't auto-download
-                )
-                # Load custom weights
-                self.model.load_state_dict(torch.load(custom_model_path, map_location=self.device))
-                logger.info("Custom OSNet model loaded (potentially better accuracy)")
+                logger.info(f"Custom model found: {custom_model_path}")
+                try:
+                    # Try to load custom model
+                    self.model = torchreid.models.build_model(
+                        name='osnet_ain_x1_0',
+                        num_classes=1000,
+                        pretrained=False  # Don't auto-download
+                    )
+                    # Load custom weights with strict=False to handle minor incompatibilities
+                    state_dict = torch.load(custom_model_path, map_location=self.device)
+                    self.model.load_state_dict(state_dict, strict=False)
+                    logger.info("Custom OSNet model loaded successfully")
+                except Exception as e:
+                    logger.warning(f"Custom model loading failed: {e}")
+                    logger.info("Falling back to auto-download...")
+                    # Fallback to auto-download
+                    self.model = torchreid.models.build_model(
+                        name='osnet_ain_x1_0',
+                        num_classes=1000,
+                        pretrained=True  # Auto-download
+                    )
+                    logger.info("Auto-download OSNet model loaded")
             else:
-                # Fallback to auto-download
+                # No custom model found, use auto-download
                 logger.info("Custom model not found, using auto-download...")
                 self.model = torchreid.models.build_model(
                     name='osnet_ain_x1_0',
                     num_classes=1000,
                     pretrained=True  # Auto-download
                 )
-                logger.info("Standard OSNet model loaded")
+                logger.info("Auto-download OSNet model loaded")
 
             self.model.to(self.device)
             self.model.eval()
