@@ -1,5 +1,5 @@
 /**
- * 🚗 Vehicle Re-Identification System - Frontend
+ * Vehicle Re-Identification System - Modern Frontend
  * Complete implementation with batch upload, target search, and results display
  */
 
@@ -33,7 +33,7 @@ function initializeApp() {
     setupSearchEvents();
     setupThresholdControl();
 
-    updateStatus('✓ Session initialized. Ready to upload images!', 'success');
+    updateStatus('Session initialized. Ready to upload images!', 'success');
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -158,7 +158,7 @@ function chooseSearchFile() {
 
 async function uploadBatchFiles() {
     if (STATE.uploadedFiles.length === 0) {
-        updateStatus('❌ No files selected. Please select images first.', 'error');
+        updateStatus('No files selected. Please select images first.', 'error');
         return;
     }
 
@@ -170,7 +170,7 @@ async function uploadBatchFiles() {
     uploadBtn.disabled = true;
     progressBar.style.display = 'block';
 
-    updateStatus(`⬆️ Uploading ${STATE.uploadedFiles.length} images to database...`, 'loading');
+    updateStatus(`Uploading ${STATE.uploadedFiles.length} images to database...`, 'loading');
 
     try {
         let successful = 0;
@@ -197,7 +197,7 @@ async function uploadBatchFiles() {
                     console.error(`Upload failed: ${file.name}`);
                 } else {
                     successful++;
-                    console.log(`✓ Uploaded: ${file.name}`);
+                    console.log(`Uploaded: ${file.name}`);
                 }
             } catch (error) {
                 failed++;
@@ -214,9 +214,9 @@ async function uploadBatchFiles() {
         }, 1000);
 
         if (failed === 0) {
-            updateStatus(`✓ Successfully uploaded ${successful} images to database!`, 'success');
+            updateStatus(`Successfully uploaded ${successful} images to database!`, 'success');
         } else {
-            updateStatus(`⚠️ Uploaded ${successful} images. ${failed} failed.`, 'error');
+            updateStatus(`Uploaded ${successful} images. ${failed} failed.`, 'error');
         }
 
         STATE.uploadedFiles = [];
@@ -226,7 +226,7 @@ async function uploadBatchFiles() {
         await refreshGallery();
 
     } catch (error) {
-        updateStatus(`❌ Upload error: ${error.message}`, 'error');
+        updateStatus(`Upload error: ${error.message}`, 'error');
         uploadBtn.disabled = false;
         progressBar.style.display = 'none';
     }
@@ -256,11 +256,11 @@ async function refreshGallery() {
         gallery.innerHTML = data.images.map((img, idx) => `
             <div class="gallery-item">
                 <div class="gallery-number">#${idx + 1}</div>
-                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: white;">
+                <div style="width: 100%; height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: white;">
                     🚗
                 </div>
                 <div class="gallery-item-status">
-                    ${img.embedding_ready ? '✓ Ready' : '⏳ Processing'}
+                    ${img.embedding_ready ? 'Ready' : 'Processing'}
                 </div>
                 <div class="gallery-item-name">${img.filename.substring(0, 15)}${img.filename.length > 15 ? '...' : ''}</div>
             </div>
@@ -276,18 +276,18 @@ async function refreshGallery() {
 
 async function searchVehicle() {
     if (!STATE.searchFile) {
-        updateStatus('❌ No target image selected. Please select an image to search.', 'error');
+        updateStatus('No target image selected. Please select an image to search.', 'error');
         return;
     }
 
     if (STATE.imageCount === 0) {
-        updateStatus('❌ No images in database. Upload images first before searching.', 'error');
+        updateStatus('No images in database. Upload images first before searching.', 'error');
         return;
     }
 
     const searchBtn = document.getElementById('searchBtn');
     searchBtn.disabled = true;
-    updateStatus('🔍 Searching database... <span class="spinner"></span>', 'loading');
+    updateStatus('Searching database... <span class="spinner"></span>', 'loading');
 
     try {
         const formData = new FormData();
@@ -315,14 +315,14 @@ async function searchVehicle() {
 
         if (data.total_matches > 0) {
             updateStatus(
-                `✓ Found ${data.total_matches} matching vehicles in ${data.search_time_ms.toFixed(0)}ms!`,
+                `Found ${data.total_matches} matching vehicles in ${data.search_time_ms.toFixed(0)}ms!`,
                 'success'
             );
         } else {
-            updateStatus(`⚠️ No matches found above ${threshold * 100}% threshold. Try lowering the threshold.`, 'error');
+            updateStatus(`No matches found above ${threshold * 100}% threshold. Try lowering the threshold.`, 'error');
         }
     } catch (error) {
-        updateStatus(`❌ Search error: ${error.message}`, 'error');
+        updateStatus(`Search error: ${error.message}`, 'error');
     } finally {
         searchBtn.disabled = false;
     }
@@ -360,7 +360,7 @@ function displayResults(data) {
                 </div>
                 <div class="result-score">${(match.match_score * 100).toFixed(1)}%</div>
                 <div class="result-type">
-                    ${match.match_type === 'confident' ? '🟢 CONFIDENT' : match.match_type === 'probable' ? '🟡 PROBABLE' : '🟠 WEAK'}
+                    ${match.match_type === 'confident' ? 'CONFIDENT' : match.match_type === 'probable' ? 'PROBABLE' : 'WEAK'}
                 </div>
                 <div class="result-meta">
                     <small>Uploaded: ${new Date(match.upload_time).toLocaleString()}</small>
@@ -378,7 +378,7 @@ function displayResults(data) {
 // ═══════════════════════════════════════════════════════════════════════
 
 async function clearSession() {
-    if (!confirm('⚠️ This will clear all uploaded images from the database. Continue?')) return;
+    if (!confirm('This will clear all uploaded images from the database. Continue?')) return;
 
     try {
         await fetch(`${STATE.apiBase}/clear/${STATE.sessionId}`, { method: 'POST' });
@@ -395,9 +395,9 @@ async function clearSession() {
         document.getElementById('imageCount').textContent = '0';
         document.getElementById('resultsSection').style.display = 'none';
 
-        updateStatus('✓ Session cleared. All images removed from database.', 'success');
+        updateStatus('Session cleared. All images removed from database.', 'success');
     } catch (error) {
-        updateStatus(`❌ Error clearing session: ${error.message}`, 'error');
+        updateStatus(`Error clearing session: ${error.message}`, 'error');
     }
 }
 
