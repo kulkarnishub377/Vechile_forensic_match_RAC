@@ -721,5 +721,5 @@ For deployment issues:
 
 ---
 
-**Deployment Guide Version**: 2.0.0
-**Last Updated**: 2025-03-23
+**Deployment Guide Version**: 1.0.0
+**Last Updated**: 2026-03-23

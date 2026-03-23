@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Vehicle Re-Identification System",
     description="Image-Based Vehicle Matching (No Database)",
-    version="2.0.0"
+    version="1.0.0"
 )
 
 # CORS Middleware
@@ -314,7 +314,7 @@ async def health():
         "models_ready": vehicle_detector.ready and embedding_generator.ready,
         "active_sessions": session_manager.get_active_count(),
         "total_images_indexed": search_engine.get_index_size(),
-        "version": "2.0.0"
+        "version": "1.0.0"
     }
 
 # ═══════════════════════════════════════════════════════════════════

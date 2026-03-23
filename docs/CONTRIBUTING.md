@@ -353,9 +353,9 @@ async def validate_image_file(file: UploadFile):
 
 ### Version Numbering
 - **MAJOR.MINOR.PATCH** (semantic versioning)
-- v2.0.0: Major feature release (new architecture)
-- v2.1.0: Minor feature release (new endpoints)
-- v2.0.1: Bug fix release
+- v1.0.0: Initial release (complete vehicle re-ID system)
+- v1.1.0: Minor feature release (new endpoints)
+- v1.0.1: Bug fix release
 
 ### Release Checklist
 1. ✅ All tests passing

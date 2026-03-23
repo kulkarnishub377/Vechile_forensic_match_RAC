@@ -402,11 +402,11 @@ export ENABLE_GPU=true              # Enable GPU (if available)
 
 | Info | Value |
 |------|-------|
-| **Version** | 2.0.0 |
+| **Version** | 1.0.0 |
 | **Status** | Production Ready |
 | **Python** | 3.11+ |
 | **License** | MIT |
-| **Last Updated** | 2025-03-23 |
+| **Last Updated** | 2026-03-23 |
 
 ---
 
@@ -442,6 +442,6 @@ For complete details: [README.md](../README.md)
 For setup help: Follow installation commands above
 
 **System Type**: Vehicle Re-Identification (Standalone)
-**Last Updated**: 2025-03-23
+**Last Updated**: 2026-03-23
 
 </div>

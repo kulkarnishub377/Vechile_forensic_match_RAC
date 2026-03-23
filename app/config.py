@@ -24,7 +24,7 @@ TEMP_DIR.mkdir(exist_ok=True)
 # ═══════════════════════════════════════════════════════════════════════
 
 SYSTEM_NAME = "Vehicle Re-Identification System"
-SYSTEM_VERSION = "2.0.0"
+SYSTEM_VERSION = "1.0.0"
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # ═══════════════════════════════════════════════════════════════════════

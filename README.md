@@ -1,4 +1,4 @@
-# 🚗 Vehicle Re-Identification System v2.0
+# 🚗 Vehicle Re-Identification System v1.0
 
 **Complete No-Database Vehicle Matching System using Deep Learning**
 
@@ -16,7 +16,7 @@
 
 <!-- License and Version -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?logo=opensourceinitiative&logoColor=white)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0-brightgreen.svg?logo=semver&logoColor=white)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg?logo=semver&logoColor=white)](CHANGELOG.md)
 [![Release](https://img.shields.io/badge/release-stable-success.svg?logo=github&logoColor=white)](https://github.com/yourusername/vehicle-reid-system/releases)
 
 <!-- Platform Support -->
