@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vehicle Re-Identification System</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="app">
@@ -12,8 +15,8 @@
         <header class="header">
             <div class="container">
                 <div class="header-content">
-                    <h1>🚗 Vehicle Re-Identification System</h1>
-                    <p>Image-Based Vehicle Matching • No Database • Real-time Results</p>
+                    <h1>Vehicle Re-Identification System</h1>
+                    <p>Advanced AI-Powered Vehicle Matching • Custom Trained Models • Real-time Results</p>
                 </div>
             </div>
         </header>
@@ -23,30 +26,36 @@
             <!-- Session Info -->
             <div class="session-card">
                 <div class="session-info">
-                    <p>Session ID: <code id="sessionId">...</code></p>
-                    <p>Database Images: <strong id="imageCount">0</strong></p>
-                    <button onclick="clearSession()" class="btn btn-danger btn-small">Clear All</button>
+                    <div>
+                        <p>Session ID: <code id="sessionId">...</code></p>
+                        <p>Database Images: <strong id="imageCount">0</strong></p>
+                    </div>
+                    <button onclick="clearSession()" class="btn btn-danger btn-small">Clear Database</button>
                 </div>
             </div>
 
-            <!-- Batch Upload Section -->
+            <!-- Step 1: Batch Upload Section -->
             <section class="section">
-                <h2>📤 Step 1: Build Database (Upload Multiple Images)</h2>
-                <p class="section-description">Upload multiple vehicle images to create your searchable database</p>
+                <h2>
+                    <span class="step-number">1</span>
+                    Build Database (Upload Multiple Images)
+                </h2>
+                <p class="section-description">Upload multiple vehicle images to create your searchable database using custom-trained models</p>
 
                 <div class="upload-zone" id="uploadZone">
-                    <p>📁 Drag & Drop Vehicle Images or Click to Browse</p>
-                    <small>Supported: JPG, PNG, BMP, WEBP (max 50MB each)</small>
-                    <div id="fileList" class="file-list"></div>
+                    <p>Drag & Drop Vehicle Images or Click to Browse</p>
+                    <small>Supported: JPG, PNG, BMP, WEBP • Custom YOLO Detection • Better Accuracy</small>
                     <input type="file" id="fileInput" multiple accept="image/*" style="display:none;">
                 </div>
 
+                <div id="fileList" class="file-list"></div>
+
                 <div class="button-group">
                     <button onclick="chooseFiles()" class="btn btn-primary">
-                        📂 Select Images
+                        Select Images
                     </button>
                     <button onclick="uploadBatchFiles()" class="btn btn-success" id="uploadBtn">
-                        ⬆️ Upload to Database
+                        Upload to Database
                     </button>
                 </div>
 
@@ -58,50 +67,63 @@
 
             <!-- Gallery Section -->
             <section class="section">
-                <h2>📋 Database Images</h2>
-                <p class="section-description">All uploaded images ready for vehicle matching</p>
+                <h2>
+                    Database Gallery
+                </h2>
+                <p class="section-description">All uploaded images processed with custom vehicle detection models</p>
                 <div class="gallery" id="gallery">
                     <p class="empty-state">No images uploaded yet. Upload images above to build your database.</p>
                 </div>
             </section>
 
-            <!-- Search Section -->
+            <!-- Step 2: Search Section -->
             <section class="section">
-                <h2>🔍 Step 2: Search for Target Vehicle</h2>
-                <p class="section-description">Upload a single target image to find similar vehicles in database</p>
+                <h2>
+                    <span class="step-number">2</span>
+                    Search for Target Vehicle
+                </h2>
+                <p class="section-description">Upload a single target image to find similar vehicles using custom OSNet-AIN embeddings</p>
 
-                <div class="search-zone" id="searchZone">
-                    <p>🎯 Drop Target Image or Click to Select</p>
-                    <small>Upload ONE image to search for matches</small>
-                    <div id="searchPreview" class="search-preview"></div>
+                <div class="upload-zone" id="searchZone">
+                    <p>Drop Target Image or Click to Select</p>
+                    <small>Upload ONE image to search for matches • OSNet-AIN Feature Extraction</small>
                     <input type="file" id="searchInput" accept="image/*" style="display:none;">
                 </div>
 
+                <div id="searchPreview" class="search-preview"></div>
+
                 <div class="search-controls">
                     <button onclick="chooseSearchFile()" class="btn btn-primary">
-                        📂 Select Target Image
+                        Select Target Image
                     </button>
                     <button onclick="searchVehicle()" class="btn btn-info" id="searchBtn">
-                        🔍 Find Matches
+                        Find Matches
                     </button>
                 </div>
 
                 <div class="threshold-control">
-                    <label>Match Threshold:</label>
+                    <label>Similarity Threshold:</label>
                     <input type="range" id="threshold" min="50" max="100" step="5" value="85">
-                    <span id="thresholdValue">0.85</span>
-                    <small>(Higher = stricter matching)</small>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                        <span id="thresholdValue">0.85</span>
+                        <small>Higher = Stricter Matching</small>
+                    </div>
                 </div>
             </section>
 
-            <!-- Results Section -->
+            <!-- Step 3: Results Section -->
             <section class="section" id="resultsSection" style="display:none;">
-                <h2>📊 Match Results</h2>
-                <p class="section-description">Vehicles ranked by similarity score</p>
+                <h2>
+                    <span class="step-number">3</span>
+                    Match Results
+                </h2>
+                <p class="section-description">Vehicles ranked by similarity using FAISS vector search</p>
+
                 <div class="results-header">
                     <span id="resultsCount"></span>
                     <span id="searchTime"></span>
                 </div>
+
                 <div id="results" class="results-list"></div>
             </section>
 
@@ -111,8 +133,10 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>Vehicle Re-Identification System v2.0 • No Database Required • Powered by YOLO + OSNet-AIN + FAISS</p>
-            <p><small>Made with ❤️ using FastAPI, PyTorch, and OpenVINO</small></p>
+            <div class="container">
+                <p>Vehicle Re-Identification System v2.0 • No Database Required</p>
+                <p><small>Powered by Custom YOLO + OSNet-AIN + FAISS • Built with FastAPI & PyTorch</small></p>
+            </div>
         </footer>
     </div>
 
