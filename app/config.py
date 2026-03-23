@@ -61,16 +61,32 @@ SUPPORTED_FORMATS_MIME = [
 # ML MODELS
 # ═══════════════════════════════════════════════════════════════════════
 
-# YOLO Detection
+# YOLO Detection - Core Module Configuration
+YOLO_BACKEND = os.getenv("YOLO_BACKEND", "pytorch")  # pytorch or openvino
 YOLO_MODEL = os.getenv("YOLO_MODEL", "yolov5n")
 YOLO_CONF_THRESHOLD = float(os.getenv("YOLO_CONF_THRESHOLD", 0.5))
 YOLO_IOU_THRESHOLD = float(os.getenv("YOLO_IOU_THRESHOLD", 0.4))
 YOLO_MAX_DET = int(os.getenv("YOLO_MAX_DET", 10))
 
-# OSNet ReID
+# Vehicle-specific YOLO thresholds (for core module compatibility)
+YOLO_VEHICLE_CONF_THRESHOLD = float(os.getenv("YOLO_VEHICLE_CONF_THRESHOLD", 0.3))
+YOLO_VEHICLE_IOU_THRESHOLD = float(os.getenv("YOLO_VEHICLE_IOU_THRESHOLD", 0.4))
+
+# Model paths (for core module compatibility)
+YOLO_PYTORCH_MODEL = MODELS_DIR / "yolov5n.pt"
+YOLO_OPENVINO_MODEL_XML = MODELS_DIR / "yolov5n.xml"
+YOLO_OPENVINO_MODEL_BIN = MODELS_DIR / "yolov5n.bin"
+
+# OSNet ReID - Core Module Configuration
 OSNET_MODEL = os.getenv("OSNET_MODEL", "osnet_ain_x1_0")
+OSNET_BACKEND = os.getenv("OSNET_BACKEND", "pytorch")  # pytorch or openvino
 OSNET_EMBEDDING_DIM = int(os.getenv("OSNET_EMBEDDING_DIM", 512))
 OSNET_IMG_SIZE = (256, 128)
+
+# ReID model paths (for core module compatibility)
+REID_PYTORCH_MODEL = MODELS_DIR / "osnet_ain_x1_0.pth"
+REID_OPENVINO_MODEL_XML = MODELS_DIR / "osnet_ain_x1_0.xml"
+REID_OPENVINO_MODEL_BIN = MODELS_DIR / "osnet_ain_x1_0.bin"
 
 # FAISS Search
 FAISS_USE_GPU = os.getenv("FAISS_USE_GPU", "false").lower() == "true"
