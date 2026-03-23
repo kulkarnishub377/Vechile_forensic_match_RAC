@@ -1,7 +1,14 @@
 """Services module initialization"""
-from .ingestion_service import IngestionService, get_ingestion_service
+from .session_manager import SessionManager
+from .image_storage import ImageStorage
+from .vehicle_detector import VehicleDetector
+from .embedding_generator import EmbeddingGenerator
+from .search_engine import SearchEngine
 
 __all__ = [
-    'IngestionService',
-    'get_ingestion_service'
+    'SessionManager',
+    'ImageStorage',
+    'VehicleDetector',
+    'EmbeddingGenerator',
+    'SearchEngine'
 ]

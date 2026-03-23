@@ -1,5 +1,5 @@
 """
-🚗 Vehicle Re-Identification System
+Vehicle Re-Identification System
 Single Unified Service - Image Upload + Real-time Matching
 No Database Required - All In-Memory Processing
 """
