@@ -1,25 +1,26 @@
 # Installation Guide
 
-Quick installation guide for the Vehicle Forensic Matching System.
+Complete installation guide for the Vehicle Re-Identification System.
 
 ---
 
 ## 📋 Prerequisites
 
-- **Python 3.9+** (3.11 recommended)
-- **Virtual Environment** (recommended)
-- **Disk Space**: ~3GB minimum
-- **RAM**: 8GB minimum (16GB recommended)
+- **Python 3.11+** (3.11.7 recommended)
+- **Virtual Environment** (strongly recommended)
+- **Disk Space**: ~2GB minimum (5GB recommended)
+- **RAM**: 4GB minimum (8GB recommended)
+- **Internet Connection** (for model downloads on first run)
 
 ---
 
-## 🚀 Quick Install (5 minutes)
+## 🚀 Quick Install (3 minutes)
 
 ### 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/frame_image_finder.git
-cd frame_image_finder
+git clone <your-repo-url>
+cd _frame_image_finder
 ```
 
 ### 2️⃣ Create Virtual Environment
@@ -40,149 +41,361 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4️⃣ Install Optional Backends
+### 4️⃣ Optional Performance Enhancements
 
 ```bash
-# For OpenVINO support (Intel CPU optimization)
-pip install openvino openvino-dev
+# OpenVINO for CPU optimization (3-5x faster)
+pip install openvino
 
-# For OCR support
-pip install paddlepaddle paddleocr
-
-# For GPU support (NVIDIA CUDA 11.8)
+# GPU support (NVIDIA CUDA 11.8+)
 # pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
 
-### 5️⃣ Verify Installation
+### 5️⃣ Start System
 
 ```bash
-python test_setup.py
+# Method 1: Using startup script
+python scripts/start_server.py
+
+# Method 2: Direct uvicorn command
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### 6️⃣ Verify Installation
+
+Open browser to: **http://localhost:8000**
+
+You should see the Vehicle Re-Identification System interface.
+
+---
+
+## ⚙️ Configuration (Optional)
+
+### Environment Variables
+
+Create `.env` file (copy from `.env.example`):
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` for your needs:
+
+```bash
+# API Server
+API_HOST=0.0.0.0
+API_PORT=8000
+API_WORKERS=4
+
+# Model Configuration
+YOLO_BACKEND=pytorch          # or openvino for faster CPU
+YOLO_CONF_THRESHOLD=0.3
+OSNET_BACKEND=pytorch
+USE_OPENVINO=false           # Set to true for faster CPU inference
+
+# Performance
+ENABLE_GPU=false             # Auto-detected if CUDA available
+MAX_SESSIONS=100
+MAX_IMAGES_PER_SESSION=1000
+
+# File Upload
+MAX_FILE_SIZE_MB=50
+
+# Matching
+MATCH_CONFIDENCE_THRESHOLD=0.85
+MATCH_CONFIDENT_LEVEL=0.92
+MATCH_PROBABLE_LEVEL=0.85
 ```
 
 ---
 
-## ⚙️ Configuration
+## 🔧 Custom Models (Optional)
 
-### Edit Configuration File
+The system supports custom trained models with automatic fallback:
 
-Open `config.ini` and update with your environment:
+### Custom Model Locations
 
-```ini
-[database]
-server = YOUR_SQL_SERVER_IP
-database = YOUR_DATABASE_NAME
-username = YOUR_USERNAME
-password = YOUR_PASSWORD
+Place your custom models in the `models/` folder:
 
-[embedding]
-yolo_backend = openvino  # or pytorch
+```
+models/
+├── yolov5_sites_vehicle_v2.pt      # Custom YOLO for vehicles
+└── osnet_ain_x1_0_imagenet.pth     # Custom OSNet-AIN ReID model
 ```
 
----
+### Auto-Download Fallback
 
-## ✅ Verify Models
+If custom models are not found, the system automatically downloads:
+- **YOLOv8n**: From Ultralytics Hub
+- **OSNet-AIN**: From TorchReID Hub
 
-Ensure these files exist in the `models/` directory:
-
-- ✅ `yolov5_sites_vehicle_v2.pt` or `yolo26n_site_v3_openvino_model/`
-- ✅ `osnet_ibn_x1_0_imagenet.pth`
-- ✅ `PP-OCRv4_mobile_rec_infer_v16/`
+**Note**: First run may take 30-60 seconds for model downloads.
 
 ---
 
-## 🎯 Next Steps
+## 🎯 Verification Steps
 
-1. **Read Quick Start**: [START_HERE.md](START_HERE.md)
-2. **Learn API**: [SEARCH_API_GUIDE.md](SEARCH_API_GUIDE.md)
-3. **Full Documentation**: [README.md](README.md#-table-of-contents)
+### System Health Check
+
+```bash
+# Check API health
+curl http://localhost:8000/api/health
+
+# Expected response:
+{
+  "status": "healthy",
+  "models_loaded": true,
+  "services": {
+    "vehicle_detector": "ready",
+    "embedding_generator": "ready",
+    "search_engine": "ready",
+    "session_manager": "ready"
+  }
+}
+```
+
+### Test Upload & Search
+
+1. **Open Web Interface**: http://localhost:8000
+2. **Upload Images**: Click "Select Images" and upload vehicle photos
+3. **Search**: Upload a target image and click "Find Matches"
+4. **Results**: Should see similarity scores and match types
 
 ---
 
 ## 🐳 Docker Installation (Alternative)
 
+### Using Docker Compose
+
+```bash
+# Clone repository
+git clone <your-repo-url>
+cd _frame_image_finder
+
+# Start with Docker Compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Manual Docker Build
+
 ```bash
 # Build image
-docker build -t frame-image-finder .
+docker build -t vehicle-reid-system .
 
 # Run container
-docker run -p 8000:8000 frame-image-finder
+docker run -p 8000:8000 vehicle-reid-system
 
-# With environment file
-docker run -p 8000:8000 --env-file .env frame-image-finder
+# With custom models (if available)
+docker run -p 8000:8000 -v ./models:/app/models vehicle-reid-system
+```
+
+---
+
+## 📊 Performance Testing
+
+### Load Test (Optional)
+
+```bash
+# Install Apache Bench
+sudo apt-get install apache2-utils  # Ubuntu
+brew install apache-bench           # macOS
+
+# Test API health endpoint
+ab -n 100 -c 10 http://localhost:8000/api/health
+
+# Test upload performance
+for i in {1..5}; do
+  curl -X POST http://localhost:8000/api/upload \
+    -F "file=@test_image_$i.jpg" \
+    -H "session_id: test-session"
+done
 ```
 
 ---
 
 ## 🆘 Troubleshooting
 
+### Issue: Models not loading
+
+```bash
+# Check internet connection
+ping github.com
+
+# Clear model cache and retry
+rm -rf ~/.cache/torch/hub/
+rm -rf ~/.cache/torch/
+
+# Restart system
+python scripts/start_server.py
+```
+
 ### Issue: "ModuleNotFoundError: No module named 'torch'"
 
 ```bash
-# Solution: Install PyTorch
+# Activate virtual environment first
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+
+# Reinstall PyTorch
 pip install torch torchvision torchaudio
 ```
 
-### Issue: "No suitable ODBC driver found"
+### Issue: High memory usage
 
 ```bash
-# Windows: Install ODBC Driver 18
-# Download: https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server
+# Reduce session limits in .env
+MAX_SESSIONS=50
+MAX_IMAGES_PER_SESSION=100
 
-# Ubuntu/Linux:
-sudo apt-get install unixodbc unixodbc-dev
-sudo apt-get install mssql-tools
+# Restart system
+python scripts/start_server.py
 ```
 
-### Issue: Database connection failed
+### Issue: Slow processing
 
 ```bash
-# Verify config.ini with correct credentials
-# Check database is accessible from your network
-# Test connection:
-python -c "from app.db import test_connection; test_connection()"
+# Enable OpenVINO optimization
+pip install openvino
+export USE_OPENVINO=true
+
+# Or use GPU (if available)
+export ENABLE_GPU=true
 ```
 
-### Issue: Out of memory during ingestion
+### Issue: Port 8000 already in use
 
-```ini
-# config.ini - Reduce batch size
-[ingestion]
-batch_size = 50  # decrease from 100
+```bash
+# Find process using port
+lsof -i :8000              # Linux/Mac
+netstat -ano | findstr :8000  # Windows
+
+# Use different port
+export API_PORT=8001
+python scripts/start_server.py
 ```
 
 ---
 
-## 📚 Related Documentation
+## 🏗️ Development Setup
 
-- **Full README**: [README.md](README.md)
-- **Quick Start**: [START_HERE.md](START_HERE.md)
-- **API Guide**: [SEARCH_API_GUIDE.md](SEARCH_API_GUIDE.md)
-- **Deployment**: [DEPLOYMENT.md](DEPLOYMENT.md)
-- **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
+### Additional Dependencies for Development
+
+```bash
+# Install development dependencies
+pip install pytest pytest-asyncio black flake8 mypy
+
+# Run tests
+pytest tests/ -v
+
+# Code formatting
+black app/ tests/ scripts/
+flake8 app/ tests/ scripts/
+
+# Type checking
+mypy app/
+```
+
+### Hot Reload for Development
+
+```bash
+# Start with auto-reload
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
 ---
 
-## ✨ Success Indicators
+## 📚 System Requirements
 
-After installation, you should see:
+### Minimum Configuration
+
+| Component | Requirement |
+|-----------|-------------|
+| **OS** | Windows 10+, Ubuntu 20.04+, macOS 11+ |
+| **Python** | 3.11+ |
+| **CPU** | 4 cores |
+| **RAM** | 4GB |
+| **Disk** | 2GB free space |
+| **Network** | Internet for initial model download |
+
+### Recommended Configuration
+
+| Component | Requirement |
+|-----------|-------------|
+| **CPU** | 8+ cores Intel/AMD |
+| **RAM** | 8GB+ |
+| **Disk** | 5GB+ NVMe SSD |
+| **GPU** | NVIDIA GPU with CUDA (optional) |
+| **Network** | 100Mbps+ for faster downloads |
+
+---
+
+## ✅ Success Indicators
+
+After successful installation, you should see:
 
 ```bash
-✅ Python 3.9+ running
+✅ Python 3.11+ running
+✅ Virtual environment activated
 ✅ All dependencies installed
-✅ Configuration valid
-✅ Models found
-✅ Database connection working
-✅ test_setup.py passes
+✅ Models loaded successfully (custom or downloaded)
+✅ API server running on port 8000
+✅ Web interface accessible
+✅ Health check returns "healthy"
+✅ Upload and search working
 ```
+
+---
+
+## 🌟 Next Steps
+
+1. **Try the System**: Upload vehicle images and test search
+2. **Read Documentation**: [Main README](../README.md)
+3. **API Integration**: [API Reference](../README.md#api-reference)
+4. **Contributing**: [Contributing Guide](CONTRIBUTING.md)
+5. **Deployment**: [Deployment Guide](DEPLOYMENT.md)
 
 ---
 
 ## 💡 Need Help?
 
-- Check [Troubleshooting](#-troubleshooting) section
-- Review logs: `logs/api.log`
-- Email: forensics@company.com
+### Quick Help
+- **Web UI Issue**: Check http://localhost:8000/api/health
+- **Model Loading**: Check internet connection and disk space
+- **Performance**: Enable OpenVINO with `USE_OPENVINO=true`
+- **Memory**: Reduce `MAX_SESSIONS` and `MAX_IMAGES_PER_SESSION`
+
+### Community Support
+- 💻 **GitHub Issues**: Report bugs and request features
+- 💬 **Discussions**: Ask questions and share ideas
+- 📖 **Documentation**: Check `docs/` folder for guides
+
+### System Logs
+```bash
+# Check application logs (if available)
+tail -f logs/app.log
+
+# Check Docker logs
+docker-compose logs -f
+
+# Check system resource usage
+htop                    # Linux
+Activity Monitor        # macOS
+Task Manager           # Windows
+```
 
 ---
 
-**Happy Installation! 🎉**
+**Installation Time**: ~3 minutes
+**First Run**: Allow +30s for model downloads
+**Ready to Use**: Upload images and start searching! 🚗
+
+---
+
+**Installation Guide Version**: 2.0.0
+**Last Updated**: 2025-03-23

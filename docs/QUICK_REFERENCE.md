@@ -1,61 +1,74 @@
 # 📋 Quick Reference Card
 
-**Vehicle Forensic Matching System** - One-page quick reference guide.
+**Vehicle Re-Identification System** - One-page quick reference guide.
 
 ---
 
 ## 🎯 Project Essence
 
-**What**: Intelligent vehicle matching system for toll plaza forensics using AI  
-**Why**: Identify same vehicle across entry/exit with 94%+ accuracy  
-**How**: 5632-D embeddings + OCR + RANSAC matching  
-**Where**: REST API on port 8000  
+**What**: Standalone vehicle re-identification system using deep learning
+**Why**: Match vehicles across multiple images with 85%+ accuracy
+**How**: YOLO detection + OSNet embeddings + FAISS similarity search
+**Where**: Web interface + REST API on port 8000
 
 ---
 
-## ⚡ Installation (30 seconds)
+## ⚡ Installation (3 minutes)
 
 ```bash
-git clone repo && cd frame_image_finder
+git clone <repo-url> && cd _frame_image_finder
 python -m venv venv && venv\Scripts\activate
 pip install -r requirements.txt
-python test_setup.py
+python scripts/start_server.py
 ```
+
+Open: **http://localhost:8000**
 
 ---
 
 ## 🚀 Quick Start (2 steps)
 
 ```bash
-# Terminal 1: Background worker
-python -m app.ingestion
+# 1. Start system
+python scripts/start_server.py
 
-# Terminal 2: API server
-python -m app.api
+# 2. Open browser
+# http://localhost:8000
 ```
+
+**Web Interface**:
+1. Upload vehicle images (Step 1)
+2. Upload target image (Step 2)
+3. Click "Find Matches"
+4. View results with similarity scores
 
 ---
 
-## 🔍 Search API
+## 🔍 API Endpoints
 
-**Endpoint**: `POST /search`  
-**URL**: `http://localhost:8000/search`
+**Base URL**: `http://localhost:8000/api`
 
-**Request**:
-```json
-{
-  "exit_transaction_id": "7313095",
-  "k": 10
-}
+**Upload Image**:
+```bash
+curl -X POST http://localhost:8000/api/upload \
+  -F "file=@vehicle.jpg" \
+  -H "session_id: my-session"
 ```
 
-**Response**:
-```json
-{
-  "matched_entry_transaction_ids": ["7299123", "7299045"],
-  "matches_found": 2,
-  "processing_time_seconds": 0.234
-}
+**Search Similar Vehicles**:
+```bash
+curl -X POST http://localhost:8000/api/search?session_id=my-session&threshold=0.85 \
+  -F "file=@target.jpg"
+```
+
+**Get Results**:
+```bash
+curl http://localhost:8000/api/results/my-session
+```
+
+**Health Check**:
+```bash
+curl http://localhost:8000/api/health
 ```
 
 ---
@@ -64,28 +77,63 @@ python -m app.api
 
 | Layer | Technology |
 |-------|-----------|
-| API | FastAPI + Uvicorn |
-| ML | PyTorch + YOLO + ResNet/OSNet |
-| OCR | PaddleOCR v4 |
-| Search | FAISS (5632-D vectors) |
-| Cache | Redis + In-Memory |
-| Database | SQL Server |
-| Monitoring | Prometheus + Grafana |
+| **Frontend** | HTML5, CSS3, Vanilla JS |
+| **Backend** | FastAPI + Uvicorn |
+| **ML Models** | YOLOv5/v8 + OSNet-AIN |
+| **Detection** | Ultralytics YOLO |
+| **ReID** | TorchReID (512-D embeddings) |
+| **Search** | FAISS IndexFlatL2 |
+| **Storage** | In-Memory (Session-based) |
+| **Optimization** | OpenVINO (optional) |
 
 ---
 
 ## ⚙️ Configuration
 
-**File**: `config.ini`
+**File**: `.env` (copy from `.env.example`)
 
 **Critical Settings**:
-```ini
-[database]
-server = YOUR_SERVER
-database = YOUR_DB
+```bash
+# Performance
+USE_OPENVINO=true         # 3-5x faster CPU
+ENABLE_GPU=false          # Auto-detected
 
-[embedding]
-yolo_backend = openvino  # or pytorch
+# Models
+YOLO_BACKEND=pytorch      # or openvino
+OSNET_BACKEND=pytorch
+
+# Limits
+MAX_SESSIONS=100
+MAX_IMAGES_PER_SESSION=1000
+MAX_FILE_SIZE_MB=50
+
+# Matching
+MATCH_CONFIDENCE_THRESHOLD=0.85
+MATCH_CONFIDENT_LEVEL=0.92
+MATCH_PROBABLE_LEVEL=0.85
+```
+
+---
+
+## 🧠 Model System
+
+### Smart Model Loading
+1. **Custom Models** (Priority):
+   - `models/yolov5_sites_vehicle_v2.pt`
+   - `models/osnet_ain_x1_0_imagenet.pth`
+
+2. **Auto-Download** (Fallback):
+   - YOLOv8n from Ultralytics
+   - OSNet-AIN from TorchReID
+
+### Installation
+```bash
+# Custom models (if available)
+mkdir models/
+# Place your .pt and .pth files here
+
+# Auto-download triggers on startup if custom models missing
+python scripts/start_server.py  # May take 30-60s first run
 ```
 
 ---
@@ -94,25 +142,43 @@ yolo_backend = openvino  # or pytorch
 
 | Metric | Value |
 |--------|-------|
-| Search Latency | 80-160ms avg |
-| Throughput | 100+ req/s |
-| Accuracy | 94-98% |
-| Memory | 2-3GB |
-| Embedding Dim | 5632 |
+| **Search Latency** | <100ms avg |
+| **Upload Processing** | 80-150ms |
+| **Memory Usage** | ~2KB per image |
+| **Accuracy** | 85-95% |
+| **Embedding Dim** | 512 |
+| **Throughput** | 10+ searches/sec |
+
+### Optimization Tips
+```bash
+# Enable OpenVINO (CPU optimization)
+pip install openvino
+export USE_OPENVINO=true
+
+# Use GPU (if available)
+export ENABLE_GPU=true
+
+# Reduce memory usage
+export MAX_SESSIONS=50
+export MAX_IMAGES_PER_SESSION=100
+```
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-# All tests
-pytest tests/ -v
+# Installation test
+curl http://localhost:8000/api/health
 
-# Coverage
-pytest tests/ --cov=app --cov-report=html
+# Upload test
+curl -X POST http://localhost:8000/api/upload \
+  -F "file=@test.jpg" \
+  -H "session_id: test"
 
-# Specific test
-pytest tests/test_api.py -v
+# Search test
+curl -X POST http://localhost:8000/api/search?session_id=test \
+  -F "file=@target.jpg"
 ```
 
 ---
@@ -120,11 +186,15 @@ pytest tests/test_api.py -v
 ## 🐳 Docker
 
 ```bash
-# Build & run
+# Docker Compose (recommended)
 docker-compose up -d
 
 # Check logs
-docker-compose logs -f api
+docker-compose logs -f
+
+# Single container
+docker build -t vehicle-reid .
+docker run -p 8000:8000 vehicle-reid
 ```
 
 ---
@@ -132,16 +202,24 @@ docker-compose logs -f api
 ## 📁 Key Files
 
 ```
-app/
-├── api.py          ← REST API service
-├── ingestion.py    ← Background worker
-├── embedding.py    ← Feature extraction
-├── matching.py     ← Matching engine
-├── ocr.py          ← Text recognition
-└── faiss_db.py     ← Vector search
-
-config.ini          ← Configuration
-requirements.txt    ← Dependencies
+_frame_image_finder/
+├── app/
+│   ├── main.py              ← FastAPI app
+│   ├── config.py            ← Configuration
+│   └── services/
+│       ├── vehicle_detector.py    ← YOLO detection
+│       ├── embedding_generator.py ← OSNet embeddings
+│       ├── search_engine.py       ← FAISS search
+│       ├── session_manager.py     ← Session handling
+│       └── image_storage.py       ← Image storage
+├── frontend/
+│   ├── index.html           ← Web interface
+│   ├── css/style.css        ← Modern styling
+│   └── js/app.js            ← JavaScript logic
+├── scripts/
+│   └── start_server.py      ← Startup script
+├── requirements.txt         ← Dependencies
+└── .env.example            ← Configuration template
 ```
 
 ---
@@ -151,11 +229,10 @@ requirements.txt    ← Dependencies
 | Need | Read |
 |------|------|
 | **Setup** | [INSTALL.md](INSTALL.md) |
-| **First Time** | [START_HERE.md](START_HERE.md) |
-| **API Details** | [SEARCH_API_GUIDE.md](SEARCH_API_GUIDE.md) |
-| **Full Details** | [README.md](README.md) |
+| **Full Details** | [README.md](../README.md) |
+| **API Reference** | [README.md#api-reference](../README.md#api-reference) |
 | **Deployment** | [DEPLOYMENT.md](DEPLOYMENT.md) |
-| **Contribute** | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| **Contributing** | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | **Changes** | [CHANGELOG.md](CHANGELOG.md) |
 | **Security** | [SECURITY.md](SECURITY.md) |
 
@@ -164,16 +241,23 @@ requirements.txt    ← Dependencies
 ## 🩺 Health Check
 
 ```bash
-# Is it running?
-curl http://localhost:8000/health
+# System health
+curl http://localhost:8000/api/health
 
-# See metrics
-curl http://localhost:8000/metrics
+# Expected response:
+{
+  "status": "healthy",
+  "models_loaded": true,
+  "services": {
+    "vehicle_detector": "ready",
+    "embedding_generator": "ready",
+    "search_engine": "ready",
+    "session_manager": "ready"
+  }
+}
 
-# Test search
-curl -X POST http://localhost:8000/search \
-  -H "Content-Type: application/json" \
-  -d '{"exit_transaction_id":"7313095"}'
+# Web interface
+curl http://localhost:8000/
 ```
 
 ---
@@ -182,63 +266,99 @@ curl -X POST http://localhost:8000/search \
 
 | Problem | Solution |
 |---------|----------|
+| **Models not loading** | Check internet connection, restart system |
 | **ModuleNotFoundError** | `pip install -r requirements.txt` |
-| **Database connection error** | Check `config.ini` database settings |
-| **Slow searches** | Switch to OpenVINO backend in `config.ini` |
-| **Out of memory** | Reduce `batch_size` in `config.ini` |
-| **ODBC driver error** | Install ODBC Driver 18 for SQL Server |
+| **Port 8000 in use** | `export API_PORT=8001` |
+| **High memory usage** | Reduce `MAX_SESSIONS` and `MAX_IMAGES_PER_SESSION` |
+| **Slow processing** | `pip install openvino` and `export USE_OPENVINO=true` |
+| **Upload failures** | Check file size (<50MB) and format (JPG/PNG/BMP/WEBP) |
 
 ---
 
-## 📊 Monitoring
+## 📊 Match Results
 
-**Metrics Endpoint**: `/metrics`  
-**Health Endpoint**: `/health`  
-**Dashboard**: Internal web interface at `/`
+### Match Types
+- 🟢 **Confident** (≥90% similarity) - Very likely same vehicle
+- 🟡 **Probable** (85-90% similarity) - Likely same vehicle
+- 🟠 **Weak** (threshold-85% similarity) - Possible match
 
-**Key Metrics**:
-```
-search_requests_total
-search_duration_seconds
-matches_found_total
-cache_hit_rate
-active_requests
+### Response Format
+```json
+{
+  "matches": [
+    {
+      "image_id": "uuid",
+      "filename": "car1.jpg",
+      "match_score": 0.92,
+      "match_type": "confident",
+      "upload_time": "2025-03-23T12:00:00"
+    }
+  ],
+  "total_matches": 1,
+  "search_time_ms": 87.5
+}
 ```
 
 ---
 
 ## 🔐 Security Notes
 
-✅ No hardcoded credentials  
-✅ Use environment variables for secrets  
-✅ CORS enabled for API  
-✅ Input validation on all endpoints  
-✅ SQL injection prevention  
+✅ **No Database Required** - All data in-memory
+✅ **Session Isolation** - Each session independent
+✅ **File Validation** - Type and size checking
+✅ **No Persistent Storage** - Data cleared on restart
+✅ **MIT Licensed** - Open source ready
+
+### Security Best Practices
+```bash
+# Use HTTPS in production
+# Set up reverse proxy (nginx)
+# Configure firewall rules
+# Regular security updates
+```
 
 ---
 
-## 💡 Common Patterns
+## 💡 Common Usage Patterns
 
-### Search with verification
-```python
-from app.matching import get_matching_engine
-engine = get_matching_engine()
-result = engine.search("7313095", k=10)
+### Web Interface Workflow
+```
+1. Open http://localhost:8000
+2. Upload database images (drag & drop)
+3. Upload target image
+4. Adjust threshold (default 85%)
+5. Click "Find Matches"
+6. Review results with confidence scores
 ```
 
-### Check embedding quality
+### API Integration
 ```python
-from app.embedding import get_embedding_engine
-engine = get_embedding_engine()
-embedding = engine.generate_embedding("image.jpg")
-print(f"Dimension: {len(embedding)}")  # Should be 5632
+import requests
+
+# Upload images
+files = {'file': open('vehicle.jpg', 'rb')}
+response = requests.post(
+    'http://localhost:8000/api/upload',
+    files=files,
+    headers={'session_id': 'my-session'}
+)
+
+# Search for matches
+target = {'file': open('target.jpg', 'rb')}
+response = requests.post(
+    'http://localhost:8000/api/search?session_id=my-session&threshold=0.85',
+    files=target
+)
+matches = response.json()
 ```
 
-### Database query
-```python
-from app.db import fetch_exit_transaction
-transaction = fetch_exit_transaction("7313095")
-print(f"Timestamp: {transaction['timestamp']}")
+### Session Management
+```bash
+# Create session by uploading first image
+# Add more images with same session_id
+# Search within that session only
+# Clear session when done
+curl -X POST http://localhost:8000/api/clear/my-session
 ```
 
 ---
@@ -249,35 +369,32 @@ print(f"Timestamp: {transaction['timestamp']}")
 # Installation
 python -m venv venv
 pip install -r requirements.txt
-python test_setup.py
 
 # Development
-python -m app.api              # Start API
-python -m app.ingestion        # Start ingestion
-pytest tests/ -v               # Run tests
+python scripts/start_server.py       # Start system
+python -m uvicorn app.main:app --reload  # Hot reload
 
 # Docker
-docker-compose up -d           # Start all services
-docker-compose logs -f         # View logs
-docker-compose down            # Stop services
+docker-compose up -d                 # Start with Docker
+docker-compose logs -f               # View logs
+docker-compose down                  # Stop services
 
-# Deployment
-azd up                         # Azure deployment
-kubectl apply -f deployment.yaml  # Kubernetes
+# Testing
+curl http://localhost:8000/api/health     # Health check
+curl http://localhost:8000/              # Web interface
 
-# Monitoring
-curl http://localhost:8000/health    # Health check
-curl http://localhost:8000/metrics   # Metrics
+# Performance
+export USE_OPENVINO=true            # Enable CPU optimization
+export ENABLE_GPU=true              # Enable GPU (if available)
 ```
 
 ---
 
 ## 📞 Support & Links
 
-**Email**: forensics@company.com  
-**GitHub**: https://github.com/yourusername/frame_image_finder  
-**Issues**: GitHub Issues  
-**Discussions**: GitHub Discussions  
+**GitHub**: Repository Issues and Discussions
+**Documentation**: `docs/` folder
+**Support**: GitHub Issues for bugs, Discussions for questions
 
 ---
 
@@ -285,44 +402,46 @@ curl http://localhost:8000/metrics   # Metrics
 
 | Info | Value |
 |------|-------|
-| **Version** | 2.6.0 |
+| **Version** | 2.0.0 |
 | **Status** | Production Ready |
-| **Python** | 3.9+ |
-| **License** | Proprietary |
-| **Last Updated** | 2025-12-26 |
+| **Python** | 3.11+ |
+| **License** | MIT |
+| **Last Updated** | 2025-03-23 |
 
 ---
 
 ## ✨ Features at a Glance
 
-- ✅ 3-5x faster searches (OpenVINO)
-- ✅ 94%+ matching accuracy
-- ✅ OCR verification (prevent false positives)
-- ✅ Multi-modal embeddings (5632-D)
-- ✅ REST API with metrics
-- ✅ Docker & Kubernetes ready
-- ✅ Redis caching
-- ✅ Prometheus monitoring
+- ✅ **No Database Required** - Standalone system
+- ✅ **Smart Model Loading** - Custom + auto-download fallback
+- ✅ **Session-Based** - Upload and search in isolated sessions
+- ✅ **Modern Web UI** - Professional glass morphism design
+- ✅ **Fast Search** - <100ms typical response time
+- ✅ **Multiple Formats** - JPG, PNG, BMP, WEBP support
+- ✅ **RESTful API** - Easy integration with other systems
+- ✅ **Docker Ready** - Complete containerization
+- ✅ **Open Source** - MIT licensed
 
 ---
 
 ## 🎯 Next Steps
 
-1. **Setup**: Follow [INSTALL.md](INSTALL.md)
-2. **Test**: Run `python test_setup.py`
-3. **Run**: Start both services
-4. **Test API**: Use `curl` commands above
-5. **Read**: Full [README.md](README.md) for details
+1. **Install**: Follow commands above or [INSTALL.md](INSTALL.md)
+2. **Test**: Open http://localhost:8000 and upload images
+3. **Integrate**: Use API endpoints for programmatic access
+4. **Deploy**: See [DEPLOYMENT.md](DEPLOYMENT.md) for production
+5. **Contribute**: Check [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
 <div align="center">
 
-### 📌 Save this reference for quick lookups!
+### 📌 Bookmark this reference for quick lookups!
 
-For full details: [README.md](README.md)  
-For help: See documentation links above  
+For complete details: [README.md](../README.md)
+For setup help: Follow installation commands above
 
-**Last Updated**: 2025-12-26
+**System Type**: Vehicle Re-Identification (Standalone)
+**Last Updated**: 2025-03-23
 
 </div>

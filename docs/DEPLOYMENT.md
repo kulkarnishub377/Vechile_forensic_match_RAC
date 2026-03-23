@@ -1,6 +1,6 @@
 # Deployment Guide
 
-Complete guide for deploying the Vehicle Forensic Matching System to production environments.
+Complete guide for deploying the Vehicle Re-Identification System to production environments.
 
 ---
 
@@ -11,7 +11,7 @@ Complete guide for deploying the Vehicle Forensic Matching System to production 
 - [Environment Setup](#-environment-setup)
 - [Configuration](#-configuration)
 - [Docker Deployment](#-docker-deployment)
-- [Kubernetes Deployment](#-kubernetes-deployment)
+- [Cloud Deployment](#-cloud-deployment)
 - [Monitoring](#-monitoring)
 - [Troubleshooting](#-troubleshooting)
 - [Rollback Procedures](#-rollback-procedures)
@@ -32,28 +32,28 @@ Complete guide for deploying the Vehicle Forensic Matching System to production 
 - [ ] README.md up to date
 - [ ] API documentation complete
 - [ ] Configuration documented
-- [ ] Changelog updated
+- [ ] CHANGELOG.md updated
 
 ### Configuration
-- [ ] Database credentials configured
-- [ ] Redis connection verified
-- [ ] Model paths correct
+- [ ] Model paths configured
 - [ ] Logging paths writable
 - [ ] CORS origins configured
+- [ ] Environment variables set
+- [ ] SSL certificates ready (production)
 
 ### Performance
 - [ ] Load testing completed
-- [ ] Response times acceptable
+- [ ] Response times acceptable (<100ms search)
 - [ ] Memory usage within limits
-- [ ] Database connection pool sized
-- [ ] Cache hit rate acceptable
+- [ ] Model loading tested
+- [ ] Session handling verified
 
 ### Security
-- [ ] No hardcoded passwords
-- [ ] API keys rotated
+- [ ] No hardcoded credentials
+- [ ] API keys secured
 - [ ] SSL/TLS certificates valid
 - [ ] Firewall rules configured
-- [ ] Database encrypted
+- [ ] File upload validation enabled
 
 ---
 
@@ -61,22 +61,22 @@ Complete guide for deploying the Vehicle Forensic Matching System to production 
 
 ### Minimum Hardware
 - **CPU**: 4 cores (8 cores recommended)
-- **RAM**: 8GB (16GB recommended)
-- **Disk**: 50GB SSD (100GB for production)
-- **Network**: 1Gbps Ethernet
+- **RAM**: 4GB (8GB recommended)
+- **Disk**: 10GB SSD (25GB for production)
+- **Network**: 100Mbps (1Gbps recommended)
 
 ### Recommended Hardware (Production)
-- **CPU**: 16 cores Intel Xeon
-- **RAM**: 32GB DDR4
-- **SSD**: 500GB NVMe (separate OS and data)
-- **Network**: Redundant 10Gbps
+- **CPU**: 8+ cores Intel/AMD
+- **RAM**: 16GB DDR4
+- **SSD**: 100GB NVMe
+- **GPU**: Optional NVIDIA GPU for acceleration
+- **Network**: Redundant 1Gbps
 
 ### Software Requirements
-- **OS**: Windows Server 2019+ or Ubuntu 20.04 LTS
-- **Python**: 3.9+ (3.11 recommended)
-- **Database**: SQL Server 2017+
-- **Cache**: Redis 6.0+
+- **OS**: Windows 10+ or Ubuntu 20.04 LTS+
+- **Python**: 3.11+ (3.11.7 recommended)
 - **Runtime**: Docker 20.10+ (optional)
+- **Web Server**: Nginx (optional reverse proxy)
 
 ---
 
@@ -97,14 +97,11 @@ sudo apt-get install -y \
     wget \
     build-essential \
     libgomp1 \
-    graphviz
-
-# Install database client
-sudo apt-get install -y unixodbc unixodbc-dev
-sudo apt-get install -y odbcinst mssql-tools
+    graphviz \
+    nginx
 
 # Install Docker (optional)
-sudo apt-get install -y docker.io docker-compose
+sudo apt-get install -y docker.io docker-compose-plugin
 ```
 
 ### 2. System Packages (Windows)
@@ -113,25 +110,26 @@ sudo apt-get install -y docker.io docker-compose
 # Using Chocolatey (install Chocolatey first if needed)
 choco install python311 -y
 choco install git -y
-choco install redis -y  # or use WSL2
+choco install nginx -y  # optional
 
-# Install ODBC Driver for SQL Server
-# Download from: https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server
+# Or use Windows Package Manager
+winget install Python.Python.3.11
+winget install Git.Git
 ```
 
 ### 3. Directory Structure
 
 ```bash
 # Create application directories
-sudo mkdir -p /opt/frame_image_finder
-sudo mkdir -p /var/log/frame_image_finder
-sudo mkdir -p /var/lib/frame_image_finder/vector_db
-sudo mkdir -p /var/lib/frame_image_finder/cache
+sudo mkdir -p /opt/vehicle-reid-system
+sudo mkdir -p /var/log/vehicle-reid-system
+sudo mkdir -p /var/lib/vehicle-reid-system/sessions
+sudo mkdir -p /var/lib/vehicle-reid-system/temp
 
 # Set permissions
-sudo chown -R appuser:appuser /opt/frame_image_finder
-sudo chown -R appuser:appuser /var/log/frame_image_finder
-sudo chown -R appuser:appuser /var/lib/frame_image_finder
+sudo chown -R appuser:appuser /opt/vehicle-reid-system
+sudo chown -R appuser:appuser /var/log/vehicle-reid-system
+sudo chown -R appuser:appuser /var/lib/vehicle-reid-system
 ```
 
 ### 4. User and Permissions
@@ -141,8 +139,8 @@ sudo chown -R appuser:appuser /var/lib/frame_image_finder
 sudo useradd -r -s /bin/bash appuser
 
 # Create log rotation config
-sudo tee /etc/logrotate.d/frame_image_finder > /dev/null <<EOF
-/var/log/frame_image_finder/*.log {
+sudo tee /etc/logrotate.d/vehicle-reid-system > /dev/null <<EOF
+/var/log/vehicle-reid-system/*.log {
     daily
     rotate 7
     compress
@@ -150,6 +148,9 @@ sudo tee /etc/logrotate.d/frame_image_finder > /dev/null <<EOF
     notifempty
     create 0640 appuser appuser
     sharedscripts
+    postrotate
+        systemctl reload vehicle-reid-system || true
+    endscript
 }
 EOF
 ```
@@ -158,88 +159,90 @@ EOF
 
 ## ⚙️ Configuration
 
-### Production config.ini
-
-```ini
-[system]
-version = 2.6.0
-embedding_version = 5632
-environment = production
-timezone = UTC
-log_level = INFO
-log_dir = /var/log/frame_image_finder
-
-[database]
-server = db-prod.company.com
-port = 1433
-database = HTMS_EPE
-username = ${DB_USERNAME}
-password = ${DB_PASSWORD}
-driver = ODBC Driver 18 for SQL Server
-trust_certificate = no
-encrypt = yes
-connection_timeout = 30
-pool_size = 20
-max_overflow = 40
-pool_timeout = 30
-pool_recycle = 3600
-
-[cache]
-redis_host = redis-prod.company.com
-redis_port = 6379
-redis_password = ${REDIS_PASSWORD}
-cache_ttl_seconds = 3600
-enable_local_cache = true
-
-[embedding]
-yolo_backend = openvino
-yolo_openvino_device = CPU
-yolo_openvino_precision = FP32
-yolo_confidence_threshold = 0.25
-yolo_iou_threshold = 0.45
-batch_size = 32
-num_workers = 8
-osnet_model_path = /opt/models/osnet_ibn_x1_0_imagenet.pth
-
-[ocr]
-enable_ocr = true
-use_paddleocr = true
-ocr_confidence_threshold = 0.8
-
-[matching]
-enable_ocr_matching = true
-uncombined_search_hours = 10
-```
-
-### Environment Variables
+### Production Environment Variables
 
 ```bash
-# Create .env file
-cat > /opt/frame_image_finder/.env << EOF
-# Database
-DB_USERNAME=prod_user
-DB_PASSWORD=$(openssl rand -base64 24)
-DB_POOL_SIZE=30
-
-# Cache
-REDIS_PASSWORD=$(openssl rand -base64 24)
-CACHE_ENABLED=true
-
-# API
-API_WORKERS=4
+# Create production .env file
+cat > /opt/vehicle-reid-system/.env << EOF
+# API Configuration
 API_HOST=0.0.0.0
 API_PORT=8000
+API_WORKERS=4
 
-# Monitoring
-PROMETHEUS_ENABLED=true
+# Model Configuration
+YOLO_BACKEND=pytorch
+YOLO_CONF_THRESHOLD=0.3
+OSNET_BACKEND=pytorch
+OSNET_EMBEDDING_DIM=512
+
+# Performance Settings
+ENABLE_GPU=false  # Set to true if GPU available
+USE_OPENVINO=true  # Enable for CPU optimization
+FAISS_USE_GPU=false
+NUM_WORKERS=4
+
+# Session Management
+MAX_SESSIONS=200
+MAX_IMAGES_PER_SESSION=500
+MAX_SESSION_DURATION_HOURS=24
+SESSION_CLEANUP_INTERVAL_MINUTES=30
+
+# File Upload
+MAX_FILE_SIZE_MB=50
+
+# Matching Thresholds
+MATCH_CONFIDENCE_THRESHOLD=0.85
+MATCH_CONFIDENT_LEVEL=0.92
+MATCH_PROBABLE_LEVEL=0.85
+
+# Timeouts
+DETECTION_TIMEOUT_SECONDS=30
+EMBEDDING_TIMEOUT_SECONDS=30
+SEARCH_TIMEOUT_SECONDS=10
+
+# Logging
 LOG_LEVEL=INFO
 
-# Security
-SECRET_KEY=$(openssl rand -base64 32)
-ALLOWED_ORIGINS=["https://api.company.com"]
+# Security (Production)
+CORS_ORIGINS=["https://yourdomain.com"]
+ENABLE_RATE_LIMITING=true
+MAX_REQUESTS_PER_MINUTE=60
 EOF
 
-chmod 600 /opt/frame_image_finder/.env
+chmod 600 /opt/vehicle-reid-system/.env
+```
+
+### Systemd Service (Linux)
+
+```bash
+# Create systemd service
+sudo tee /etc/systemd/system/vehicle-reid-system.service > /dev/null <<EOF
+[Unit]
+Description=Vehicle Re-Identification System
+After=network.target
+
+[Service]
+Type=exec
+User=appuser
+Group=appuser
+WorkingDirectory=/opt/vehicle-reid-system
+Environment=PATH=/opt/vehicle-reid-system/venv/bin
+ExecStart=/opt/vehicle-reid-system/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+ExecReload=/bin/kill -HUP \$MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable and start service
+sudo systemctl daemon-reload
+sudo systemctl enable vehicle-reid-system
+sudo systemctl start vehicle-reid-system
 ```
 
 ---
@@ -257,31 +260,36 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     libgomp1 \
-    unixodbc-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
+# Copy requirements first for better caching
 COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt && \
     pip install gunicorn
 
-# Copy application
+# Copy application code
 COPY . .
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    mkdir -p /app/temp && \
+    chown appuser:appuser /app/temp
+
 USER appuser
 
+# Expose port
+EXPOSE 8000
+
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
 
 # Run application
-CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", \
-     "--bind", "0.0.0.0:8000", "app.api:app"]
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
 ```
 
 ### docker-compose.yml
@@ -290,266 +298,271 @@ CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", \
 version: '3.8'
 
 services:
-  api:
+  vehicle-reid:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=redis
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - LOG_LEVEL=INFO
+      - API_WORKERS=4
+      - MAX_SESSIONS=200
+      - USE_OPENVINO=true
     volumes:
-      - ./logs:/var/log/frame_image_finder
-      - ./data:/app/data
-      - ./vector_db:/app/vector_db
-    depends_on:
-      - redis
-      - ingestion
+      - ./logs:/var/log/vehicle-reid-system
+      - ./temp:/app/temp
+      - ./models:/app/models  # Mount custom models if available
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-  ingestion:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=redis
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - LOG_LEVEL=INFO
-    volumes:
-      - ./logs:/var/log/frame_image_finder
-      - ./data:/app/data
-      - ./vector_db:/app/vector_db
-    command: python -m app.ingestion
-    depends_on:
-      - redis
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
+  nginx:
+    image: nginx:alpine
     ports:
-      - "6379:6379"
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+      - "80:80"
+      - "443:443"
     volumes:
-      - redis_data:/data
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl  # SSL certificates
+    depends_on:
+      - vehicle-reid
     restart: unless-stopped
 
 volumes:
-  redis_data:
+  logs:
+  temp:
 ```
 
-### Deployment Commands
+### Nginx Configuration
 
-```bash
-# Build images
-docker-compose build
+```nginx
+events {
+    worker_connections 1024;
+}
 
-# Start services
-docker-compose up -d
+http {
+    upstream vehicle_reid {
+        server vehicle-reid:8000;
+    }
 
-# View logs
-docker-compose logs -f api
+    server {
+        listen 80;
+        server_name yourdomain.com;
 
-# Stop services
-docker-compose down
+        # Redirect to HTTPS
+        return 301 https://$server_name$request_uri;
+    }
 
-# Clean up
-docker-compose down -v --rmi all
+    server {
+        listen 443 ssl http2;
+        server_name yourdomain.com;
+
+        ssl_certificate /etc/nginx/ssl/cert.pem;
+        ssl_certificate_key /etc/nginx/ssl/key.pem;
+
+        # Security headers
+        add_header X-Frame-Options DENY;
+        add_header X-Content-Type-Options nosniff;
+        add_header X-XSS-Protection "1; mode=block";
+
+        # File upload size
+        client_max_body_size 50M;
+
+        location / {
+            proxy_pass http://vehicle_reid;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # Timeouts for long-running uploads
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+    }
+}
 ```
 
 ---
 
-## ☸️ Kubernetes Deployment
+## ☁️ Cloud Deployment
 
-### Deployment Manifest (deployment.yaml)
+### AWS ECS (Fargate)
 
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: frame-image-finder
-  namespace: production
-spec:
-  replicas: 3
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-  selector:
-    matchLabels:
-      app: frame-image-finder
-  template:
-    metadata:
-      labels:
-        app: frame-image-finder
-        version: "2.6.0"
-    spec:
-      serviceAccountName: frame-image-finder
-      containers:
-      - name: api
-        image: registry.company.com/frame-image-finder:2.6.0
-        imagePullPolicy: IfNotPresent
-        ports:
-        - name: http
-          containerPort: 8000
-          protocol: TCP
-        env:
-        - name: DB_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: username
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: password
-        - name: REDIS_HOST
-          value: redis-service
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: redis-credentials
-              key: password
-        - name: LOG_LEVEL
-          value: "INFO"
-        resources:
-          requests:
-            memory: "4Gi"
-            cpu: "2"
-          limits:
-            memory: "8Gi"
-            cpu: "4"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: http
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: http
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
-        volumeMounts:
-        - name: logs
-          mountPath: /var/log/frame_image_finder
-        - name: vector-db
-          mountPath: /app/vector_db
-      volumes:
-      - name: logs
-        persistentVolumeClaim:
-          claimName: logs-pvc
-      - name: vector-db
-        persistentVolumeClaim:
-          claimName: vector-db-pvc
+# ecs-task-definition.json
+{
+  "family": "vehicle-reid-system",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "4096",
+  "executionRoleArn": "arn:aws:iam::account:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "vehicle-reid",
+      "image": "your-registry/vehicle-reid:latest",
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {"name": "LOG_LEVEL", "value": "INFO"},
+        {"name": "API_WORKERS", "value": "4"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/vehicle-reid-system",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/api/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3
+      }
+    }
+  ]
+}
 ```
 
-### Service Manifest (service.yaml)
+### Google Cloud Run
 
 ```yaml
-apiVersion: v1
+# service.yaml
+apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: frame-image-finder-service
-  namespace: production
-spec:
-  type: ClusterIP
-  selector:
-    app: frame-image-finder
-  ports:
-  - name: http
-    port: 80
-    targetPort: http
-    protocol: TCP
-```
-
-### Ingress Manifest (ingress.yaml)
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: frame-image-finder-ingress
-  namespace: production
+  name: vehicle-reid-system
   annotations:
-    kubernetes.io/ingress.class: nginx
-    cert-manager.io/cluster-issuer: letsencrypt-prod
+    run.googleapis.com/ingress: all
 spec:
-  tls:
-  - hosts:
-    - api.company.com
-    secretName: frame-image-finder-tls
-  rules:
-  - host: api.company.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: frame-image-finder-service
-            port:
-              number: 80
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "10"
+        run.googleapis.com/cpu-throttling: "false"
+        run.googleapis.com/memory: "4Gi"
+        run.googleapis.com/cpu: "2"
+    spec:
+      containers:
+      - image: gcr.io/project/vehicle-reid:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: API_WORKERS
+          value: "1"  # Cloud Run handles scaling
+        resources:
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 60
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 0
+          timeoutSeconds: 240
 ```
 
 ---
 
 ## 📊 Monitoring
 
-### Prometheus Configuration
+### Health Check Endpoint
+
+The system provides comprehensive health checking:
+
+```bash
+# Basic health check
+curl http://localhost:8000/api/health
+
+# Expected response
+{
+  "status": "healthy",
+  "models_loaded": true,
+  "services": {
+    "vehicle_detector": "ready",
+    "embedding_generator": "ready",
+    "search_engine": "ready",
+    "session_manager": "ready"
+  },
+  "system": {
+    "memory_usage_mb": 1024,
+    "cpu_percent": 15.2,
+    "uptime_seconds": 3600
+  }
+}
+```
+
+### Metrics Collection
+
+```python
+# Prometheus metrics available at /metrics
+# Key metrics to monitor:
+
+# Request metrics
+vehicle_reid_requests_total{method="POST", endpoint="/api/search"}
+vehicle_reid_request_duration_seconds{method="POST", endpoint="/api/search"}
+
+# Processing metrics
+vehicle_reid_detection_duration_seconds
+vehicle_reid_embedding_duration_seconds
+vehicle_reid_search_duration_seconds
+
+# System metrics
+vehicle_reid_active_sessions
+vehicle_reid_total_images
+vehicle_reid_memory_usage_bytes
+```
+
+### Alerting Rules (Prometheus)
 
 ```yaml
-global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+groups:
+- name: vehicle-reid-alerts
+  rules:
+  - alert: HighResponseTime
+    expr: vehicle_reid_request_duration_seconds{quantile="0.95"} > 5
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High response time detected"
 
-scrape_configs:
-- job_name: 'frame-image-finder'
-  static_configs:
-  - targets: ['localhost:8000']
-  metrics_path: '/metrics'
+  - alert: HighMemoryUsage
+    expr: vehicle_reid_memory_usage_bytes > 8e9  # 8GB
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Memory usage above threshold"
+
+  - alert: ServiceDown
+    expr: up{job="vehicle-reid"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Vehicle ReID service is down"
 ```
-
-### Key Metrics to Monitor
-
-```
-# Search performance
-frame_image_finder_search_duration_seconds
-frame_image_finder_search_requests_total
-frame_image_finder_matches_found_total
-
-# Resource usage
-process_resident_memory_bytes
-process_cpu_seconds_total
-python_gc_collections_total
-
-# Application health
-frame_image_finder_active_requests
-frame_image_finder_db_query_duration_seconds
-frame_image_finder_cache_hit_ratio
-```
-
-### Grafana Dashboard
-
-Create dashboard with panels for:
-- Search latency (p50, p95, p99)
-- Request rate and errors
-- Memory and CPU usage
-- Cache hit rate
-- Database connection pool
-- Vector database size
 
 ---
 
@@ -557,87 +570,111 @@ Create dashboard with panels for:
 
 ### Common Issues
 
+#### Issue: Models Not Loading
+
+```bash
+# Check model files
+ls -la models/
+# Should show: yolov5_sites_vehicle_v2.pt, osnet_ain_x1_0_imagenet.pth (if custom)
+
+# Check internet connection for auto-download
+curl -I https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.pt
+
+# Check logs
+tail -f /var/log/vehicle-reid-system/app.log | grep -i model
+```
+
 #### Issue: High Memory Usage
 
-```python
-# Check cache configuration
-# Solution: Enable local cache limits or reduce TTL
+```bash
+# Monitor memory
+ps aux | grep python
+htop -p $(pgrep -f uvicorn)
 
-# Check FAISS index size
-import os
-size_mb = os.path.getsize('vector_db/faiss_index.bin') / (1024**2)
-print(f"FAISS index: {size_mb}MB")
+# Solution: Reduce session limits
+export MAX_SESSIONS=50
+export MAX_IMAGES_PER_SESSION=100
 ```
 
-#### Issue: Slow Searches
+#### Issue: Slow Processing
 
 ```bash
-# Check backend
-curl http://localhost:8000/health | grep yolo_backend
+# Enable OpenVINO optimization
+export USE_OPENVINO=true
 
-# Solution: Switch to OpenVINO backend
-# config.ini: yolo_backend = openvino
+# Check CPU usage
+top -p $(pgrep -f uvicorn)
+
+# Monitor processing times
+curl http://localhost:8000/metrics | grep duration
 ```
 
-#### Issue: Database Connection Pool Exhausted
-
-```ini
-[database]
-pool_size = 30  # Increase
-pool_timeout = 60  # Increase
-pool_recycle = 1800  # Adjust
-```
-
-### Debugging
+#### Issue: File Upload Failures
 
 ```bash
-# Check application logs
-tail -f /var/log/frame_image_finder/api.log
+# Check file size limits
+curl -F "file=@large_image.jpg" http://localhost:8000/api/upload
+# Increase MAX_FILE_SIZE_MB if needed
 
-# Check system resources
-top -p $(pgrep -f 'python -m app.api')
+# Check disk space
+df -h /tmp
+df -h /app/temp
+```
 
-# Verify database connection
-python -c "from app.db import test_connection; test_connection()"
+### Debugging Commands
 
-# Check Redis connectivity
-redis-cli -a $REDIS_PASSWORD ping
+```bash
+# View application logs
+journalctl -u vehicle-reid-system -f
 
-# Monitor FAISS
-python scripts/monitor_faiss.py
+# Check service status
+systemctl status vehicle-reid-system
+
+# Test API endpoints
+curl -X GET http://localhost:8000/api/health
+curl -X POST http://localhost:8000/api/upload -F "file=@test.jpg"
+
+# Monitor resource usage
+docker stats vehicle-reid-container
 ```
 
 ---
 
 ## 🔄 Rollback Procedures
 
-### Quick Rollback (to previous version)
+### Quick Rollback (Docker)
 
 ```bash
-# Stop current version
+# Stop current deployment
 docker-compose down
 
-# Restore from backup
-cp -r backups/2.5.0/* /opt/frame_image_finder/
+# Pull previous image
+docker pull your-registry/vehicle-reid:v1.9.0
+
+# Update docker-compose.yml to previous version
+sed -i 's/vehicle-reid:latest/vehicle-reid:v1.9.0/' docker-compose.yml
 
 # Start previous version
 docker-compose up -d
 
-# Verify
-curl http://localhost:8000/health
+# Verify service
+curl http://localhost:8000/api/health
 ```
 
-### Data Rollback
+### Service Rollback (Systemd)
 
 ```bash
-# Backup current FAISS index
-cp vector_db/faiss_index.bin vector_db/faiss_index.bin.backup.v2.6.0
+# Stop service
+sudo systemctl stop vehicle-reid-system
 
-# Restore previous FAISS index
-cp backups/faiss_index.bin.v2.5.0 vector_db/faiss_index.bin
+# Restore previous version
+sudo cp -r /opt/backups/vehicle-reid-v1.9.0/* /opt/vehicle-reid-system/
 
-# Restart
-docker-compose restart api ingestion
+# Restart service
+sudo systemctl start vehicle-reid-system
+
+# Check status
+sudo systemctl status vehicle-reid-system
 ```
 
 ---
@@ -645,32 +682,44 @@ docker-compose restart api ingestion
 ## 📝 Post-Deployment
 
 ### Verification Checklist
-- [ ] Health check passing
-- [ ] API responding to requests
-- [ ] Database connected
-- [ ] Cache working
-- [ ] Logs being written
-- [ ] Metrics being collected
-- [ ] Performance acceptable
-- [ ] No errors in logs
+- [ ] Health check returns 200 OK
+- [ ] API endpoints respond correctly
+- [ ] File upload works
+- [ ] Search functionality works
+- [ ] Logs are being written
+- [ ] Metrics are being collected
+- [ ] SSL certificates valid (production)
+- [ ] Performance meets requirements
 
-### Monitoring Setup
-- [ ] Prometheus scraping metrics
-- [ ] Grafana dashboards active
-- [ ] Alerting rules configured
-- [ ] Log aggregation working
-- [ ] Health checks running
+### Load Testing
+
+```bash
+# Install Apache Bench
+sudo apt-get install apache2-utils
+
+# Test health endpoint
+ab -n 100 -c 10 http://localhost:8000/api/health
+
+# Test upload endpoint (prepare test images first)
+for i in {1..10}; do
+  curl -X POST http://localhost:8000/api/upload \
+    -F "file=@test_vehicle_$i.jpg" \
+    -H "session_id: load-test-session"
+done
+```
 
 ---
 
 ## 📞 Support
 
 For deployment issues:
-- Check logs: `/var/log/frame_image_finder/`
-- Review metrics: http://localhost:8000/metrics
-- Consult documentation: README.md, SEARCH_API_GUIDE.md
-- Contact: forensics@company.com
+- Check logs: `/var/log/vehicle-reid-system/`
+- Review health endpoint: `/api/health`
+- Monitor metrics: `/metrics`
+- Consult documentation in `docs/` folder
+- Open GitHub issue for bugs
 
 ---
 
-**Last Updated**: 2025-12-26
+**Deployment Guide Version**: 2.0.0
+**Last Updated**: 2025-03-23
