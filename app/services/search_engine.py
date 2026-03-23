@@ -25,7 +25,7 @@ class SearchEngine:
         try:
             # Create L2 distance index
             self.index = faiss.IndexFlatL2(self.dimension)
-            logger.info("✓ FAISS index initialized")
+            logger.info("FAISS index initialized")
         except Exception as e:
             logger.error(f"FAISS initialization error: {str(e)}")
             raise
