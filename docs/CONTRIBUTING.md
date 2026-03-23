@@ -1,4 +1,4 @@
-# Contributing to Vehicle Forensic Matching System
+# Contributing to Vehicle Re-Identification System
 
 Thank you for your interest in contributing! This document provides guidelines and instructions for contributing to the project.
 
@@ -39,8 +39,9 @@ What actually happens
 
 ## Environment
 - OS: [Windows/Linux/macOS]
-- Python Version: [3.9/3.10/3.11]
+- Python Version: [3.11+]
 - Backend: [PyTorch/OpenVINO]
+- Models: [Custom/Auto-downloaded]
 
 ## Logs/Screenshots
 Include relevant error messages or screenshots
@@ -62,8 +63,8 @@ Submit feature requests via issues with:
 
 ### 1. Fork & Clone
 ```bash
-git clone https://github.com/yourusername/frame_image_finder.git
-cd frame_image_finder
+git clone https://github.com/yourusername/vehicle-reid-system.git
+cd vehicle-reid-system
 ```
 
 ### 2. Create Branch
@@ -76,7 +77,8 @@ git checkout -b fix/bug-name
 ### 3. Setup Development Environment
 ```bash
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 pip install pytest pytest-asyncio black flake8 mypy
 ```
@@ -98,6 +100,9 @@ black --check app/ tests/
 
 # Type checking
 mypy app/
+
+# Test the system
+python scripts/start_server.py
 ```
 
 ### 6. Commit & Push
@@ -135,40 +140,38 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class MyModel:
-    """Clear docstring explaining the model."""
-    field1: str
-    field2: int = 0
+class VehicleMatch:
+    """Represents a vehicle matching result."""
+    image_id: str
+    similarity_score: float
+    match_type: str = "weak"
 
 
-def my_function(
-    param1: str,
-    param2: int = 10,
-    param3: Optional[List[str]] = None
-) -> Tuple[bool, str]:
+def search_similar_vehicles(
+    target_image: str,
+    threshold: float = 0.85,
+    max_results: Optional[int] = None
+) -> List[VehicleMatch]:
     """
-    Clear function docstring with:
-    - What it does
-    - Parameters explained
-    - Return value explained
-    - Raises section if applicable
-    
+    Search for similar vehicles using embedding similarity.
+
     Args:
-        param1: First parameter description
-        param2: Second parameter with default
-        param3: Optional list parameter
-        
+        target_image: Path to target vehicle image
+        threshold: Minimum similarity threshold (0.0-1.0)
+        max_results: Maximum number of results to return
+
     Returns:
-        Tuple of (success: bool, message: str)
-        
+        List of VehicleMatch objects sorted by similarity
+
     Raises:
-        ValueError: If param1 is empty
+        FileNotFoundError: If target_image doesn't exist
+        ValueError: If threshold is invalid
     """
-    if not param1:
-        raise ValueError("param1 cannot be empty")
-    
-    result = True
-    return result, "Success"
+    if not 0.0 <= threshold <= 1.0:
+        raise ValueError("Threshold must be between 0.0 and 1.0")
+
+    # Implementation...
+    return []
 ```
 
 ---
@@ -178,16 +181,20 @@ def my_function(
 ### Adding New Features
 ```
 app/
-├── new_feature.py          # Feature implementation
-├── new_feature_utils.py    # Helper functions (if needed)
-└── tests/
-    └── test_new_feature.py # Tests
+├── services/
+│   ├── new_service.py          # Service implementation
+│   └── __init__.py
+├── tests/
+│   └── test_new_service.py     # Tests
+└── frontend/
+    ├── js/new_feature.js       # Frontend code
+    └── css/new_styles.css      # Styling
 ```
 
 ### Naming Conventions
--**Classes**: `PascalCase` (e.g., `VehicleMatchingEngine`)
-- **Functions**: `snake_case` (e.g., `extract_embeddings`)
-- **Constants**: `UPPER_SNAKE_CASE` (e.g., `MAX_BATCH_SIZE`)
+- **Classes**: `PascalCase` (e.g., `EmbeddingGenerator`)
+- **Functions**: `snake_case` (e.g., `generate_embedding`)
+- **Constants**: `UPPER_SNAKE_CASE` (e.g., `MAX_IMAGE_SIZE`)
 - **Private**: Prefix with `_` (e.g., `_internal_method`)
 
 ---
@@ -203,47 +210,36 @@ app/
 ### Test Example
 ```python
 import pytest
-from app.embedding import EmbeddingEngine
+from app.services.embedding_generator import EmbeddingGenerator
 
-class TestEmbeddingEngine:
-    """Test suite for EmbeddingEngine."""
-    
+class TestEmbeddingGenerator:
+    """Test suite for EmbeddingGenerator."""
+
     def setup_method(self):
         """Setup before each test."""
-        self.engine = EmbeddingEngine()
-    
+        self.generator = EmbeddingGenerator()
+
     def test_generate_embedding_valid_image(self):
         """Test generating embedding from valid image."""
         # Arrange
         image_path = "tests/fixtures/sample_vehicle.jpg"
-        
+
         # Act
-        embedding = self.engine.generate_embedding(image_path)
-        
+        embedding = self.generator.generate_embedding(image_path)
+
         # Assert
         assert embedding is not None
-        assert len(embedding) == 5632
+        assert len(embedding) == 512
         assert isinstance(embedding, np.ndarray)
-    
+
     def test_generate_embedding_invalid_path(self):
         """Test embedding generation with invalid path."""
         # Arrange
         invalid_path = "nonexistent.jpg"
-        
+
         # Act & Assert
         with pytest.raises(FileNotFoundError):
-            self.engine.generate_embedding(invalid_path)
-    
-    def test_batch_processing(self):
-        """Test batch embedding generation."""
-        # Arrange
-        image_paths = [f"test_{i}.jpg" for i in range(5)]
-        
-        # Act
-        embeddings = self.engine.batch_embeddings(image_paths)
-        
-        # Assert
-        assert len(embeddings) == 5
+            self.generator.generate_embedding(invalid_path)
 ```
 
 ---
@@ -253,52 +249,21 @@ class TestEmbeddingEngine:
 ### Code Comments
 ```python
 # Good: Explains why and what, not how
-result = embedding_similarity(e1, e2)
+similarity_threshold = 0.85  # Empirically optimal for vehicle matching
 
 # Bad: Obvious from code
-value = a + b  # Add a and b
+result = a + b  # Add a and b
 
 # Good: Complex logic explained
-# Pre-filter by confidence to reduce FAISS queries by 70%
-high_confidence = [m for m in matches if m.score > 0.8]
+# Use L2 distance for FAISS - performs better than cosine for vehicle embeddings
+faiss_index = faiss.IndexFlatL2(embedding_dim)
 ```
 
-### Docstring Format
-```python
-def search_matching_vehicles(
-    exit_id: str,
-    k: int = 10
-) -> List[MatchResult]:
-    """
-    Search for vehicles matching an exit transaction.
-    
-    This method uses combined embedding + OCR verification to find
-    the most similar vehicle entries. Results are ranked by confidence.
-    
-    Args:
-        exit_id: EXIT transaction identifier
-        k: Number of top matches to return (default: 10)
-        
-    Returns:
-        List of MatchResult objects sorted by confidence score
-        
-    Raises:
-        TransactionNotFoundError: If exit_id doesn't exist
-        DatabaseConnectionError: If database unavailable
-        
-    Example:
-        >>> engine = get_matching_engine()
-        >>> results = engine.search_matching_vehicles("7313095", k=5)
-        >>> for result in results:
-        >>>     print(f"Match: {result.entry_id} ({result.confidence})")
-    """
-```
-
-### README Updates
-- Update table of contents if needed
-- Add usage examples for new features
-- Document new configuration options
-- Update API documentation
+### API Documentation
+- Update OpenAPI schema for new endpoints
+- Include request/response examples
+- Document error codes and messages
+- Add usage examples
 
 ---
 
@@ -310,26 +275,29 @@ def search_matching_vehicles(
 3. ✅ Profile to identify bottlenecks
 
 ### Common Optimization Areas
+- **Model Loading**: Lazy loading, caching
 - **Embedding Generation**: Batch processing, GPU acceleration
-- **Vector Search**: Index optimization, cache strategies
-- **Database Queries**: Connection pooling, async operations
-- **Memory Usage**: Lazy loading, generator functions
+- **Vector Search**: Index optimization, parallel queries
+- **Memory Usage**: Efficient data structures, cleanup
 
 ### Profiling Example
 ```python
+import time
 import cProfile
-import pstats
 
-profiler = cProfile.Profile()
-profiler.enable()
+def profile_search():
+    """Profile vehicle search performance."""
+    profiler = cProfile.Profile()
+    profiler.enable()
 
-# Code to profile
-result = engine.search("7313095", k=10)
+    # Code to profile
+    start_time = time.time()
+    results = search_engine.find_matches(target_image)
+    end_time = time.time()
 
-profiler.disable()
-stats = pstats.Stats(profiler)
-stats.sort_stats('cumulative')
-stats.print_stats(20)  # Top 20 functions
+    profiler.disable()
+    print(f"Search took: {end_time - start_time:.3f}s")
+    profiler.print_stats(sort='cumulative')
 ```
 
 ---
@@ -337,36 +305,46 @@ stats.print_stats(20)  # Top 20 functions
 ## 🔐 Security Considerations
 
 ### Before Submitting Code
-- ✅ No hardcoded credentials
-- ✅ No sensitive data in logs
-- ✅ Input validation on all APIs
+- ✅ No hardcoded credentials or API keys
+- ✅ Input validation on all endpoints
+- ✅ File upload security (type, size limits)
 - ✅ Error messages don't leak system info
-- ✅ Dependencies are from trusted sources
+- ✅ Dependencies from trusted sources only
 
 ### Secure Coding Example
 ```python
+from fastapi import HTTPException, UploadFile
 from pydantic import BaseModel, validator
 
 class SearchRequest(BaseModel):
-    """Validate search request."""
-    exit_transaction_id: str
-    k: int = 10
-    
-    @validator('exit_transaction_id')
-    def validate_transaction_id(cls, v):
-        """Prevent injection attacks."""
-        if not v.isalnum():
-            raise ValueError('Invalid transaction ID format')
-        if len(v) > 20:
-            raise ValueError('Transaction ID too long')
+    """Validate search request parameters."""
+    threshold: float = 0.85
+    max_results: int = 50
+
+    @validator('threshold')
+    def validate_threshold(cls, v):
+        """Ensure valid threshold range."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError('Threshold must be between 0.0 and 1.0')
         return v
-    
-    @validator('k')
-    def validate_k(cls, v):
-        """Ensure reasonable batch size."""
-        if not 1 <= v <= 50:
-            raise ValueError('k must be between 1 and 50')
+
+    @validator('max_results')
+    def validate_max_results(cls, v):
+        """Prevent excessive result sets."""
+        if not 1 <= v <= 100:
+            raise ValueError('Max results must be between 1 and 100')
         return v
+
+async def validate_image_file(file: UploadFile):
+    """Validate uploaded image file."""
+    # Check file extension
+    allowed_types = ['image/jpeg', 'image/png', 'image/bmp', 'image/webp']
+    if file.content_type not in allowed_types:
+        raise HTTPException(400, "Invalid file type")
+
+    # Check file size (50MB limit)
+    if file.size > 50 * 1024 * 1024:
+        raise HTTPException(400, "File too large")
 ```
 
 ---
@@ -375,35 +353,36 @@ class SearchRequest(BaseModel):
 
 ### Version Numbering
 - **MAJOR.MINOR.PATCH** (semantic versioning)
-- v2.6.0: Major feature release
-- v2.6.1: Bug fix release
-- v2.7.0: Minor feature release
+- v2.0.0: Major feature release (new architecture)
+- v2.1.0: Minor feature release (new endpoints)
+- v2.0.1: Bug fix release
 
 ### Release Checklist
 1. ✅ All tests passing
 2. ✅ Code fully reviewed
-3. ✅ Changelog updated
-4. ✅ Version number updated
-5. ✅ Dependencies locked
-6. ✅ Documentation updated
+3. ✅ Documentation updated
+4. ✅ Version number bumped
+5. ✅ CHANGELOG.md updated
+6. ✅ Dependencies verified
 7. ✅ GitHub release created
+8. ✅ Demo working
 
 ---
 
 ## 💬 Getting Help
 
 ### Resources
-- 📖 [Documentation](README.md)
-- 🔍 [API Guide](SEARCH_API_GUIDE.md)
-- 🚀 [Quick Start](START_HERE.md)
-- 💻 [GitHub Issues](#)
-- 📧 Email: forensics@company.com
+- 📖 [Documentation](../README.md)
+- 🚀 [Quick Start Guide](../README.md#quick-start)
+- 🔧 [Installation Guide](../README.md#installation)
+- 💻 [GitHub Issues](../../issues)
+- 📧 [Discussions](../../discussions)
 
-### Discussion Topics
-- Architecture questions
-- Best practices
-- Feature brainstorming
-- Performance optimization
+### Common Questions
+- **Model loading issues**: Check `models/` folder and internet connection
+- **Performance optimization**: Enable OpenVINO or GPU acceleration
+- **Memory issues**: Reduce batch size or session limits
+- **API integration**: See API documentation section
 
 ---
 
@@ -413,6 +392,7 @@ Contributors are recognized in:
 - README.md contributors section
 - Release notes
 - GitHub insights
+- Special thanks in documentation
 
 ---
 
@@ -420,27 +400,43 @@ Contributors are recognized in:
 
 ### Useful Commands
 ```bash
-# Run tests
-pytest tests/ -v
+# Development server
+python scripts/start_server.py
+
+# Run all tests
+pytest tests/ -v --cov=app
 
 # Code formatting
-black app/ tests/
-flake8 app/ tests/
+black app/ tests/ scripts/
+flake8 app/ tests/ scripts/
 
 # Type checking
 mypy app/
 
-# Test coverage
-pytest --cov=app --cov-report=html
+# Check system health
+curl http://localhost:8000/api/health
 
-# Start development server
-python -m app.api
+# Test API endpoints
+curl -X POST http://localhost:8000/api/upload \
+  -F "file=@test_vehicle.jpg" \
+  -H "session_id: test-session"
+```
 
-# Start ingestion worker
-python -m app.ingestion
-
-# View metrics
-curl http://localhost:8000/metrics
+### File Structure
+```
+_frame_image_finder/
+├── app/                    # Backend application
+│   ├── services/          # Core services
+│   ├── main.py           # FastAPI app
+│   └── config.py         # Configuration
+├── frontend/              # Web interface
+│   ├── index.html        # Main page
+│   ├── css/style.css     # Styling
+│   └── js/app.js         # JavaScript
+├── models/               # Model files (gitignored)
+├── scripts/              # Utility scripts
+├── tests/                # Test suite
+└── docs/                 # Documentation
 ```
 
 ---
@@ -448,15 +444,15 @@ curl http://localhost:8000/metrics
 ## 📞 Questions?
 
 Don't hesitate to:
-- Open a discussion issue
-- Comment on existing issues
-- Ask in pull request reviews
-- Email the team
+- Open a GitHub issue for bugs
+- Start a discussion for questions
+- Comment on pull requests
+- Contribute to documentation
 
-We're here to help! 🙌
+We welcome all contributions, from code to documentation to bug reports! 🙌
 
 ---
 
 **Happy Contributing! 🚀**
 
-Thank you for making this project better!
+Thank you for helping make vehicle re-identification better!
