@@ -13,7 +13,7 @@ import uvicorn
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🚗 Vehicle Re-Identification System v2.0")
+    print("Vehicle Re-Identification System v2.0")
     print("=" * 60)
     print("Starting server on http://localhost:8000")
     print("Press Ctrl+C to stop")

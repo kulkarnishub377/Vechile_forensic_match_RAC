@@ -8,7 +8,6 @@ from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZIPMiddleware
 import uuid
 import time
 import logging
@@ -49,9 +48,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# GZIP Compression
-app.add_middleware(GZIPMiddleware, minimum_size=1000)
 
 # Static Files (Frontend)
 frontend_dir = Path(__file__).parent.parent / "frontend"
@@ -329,28 +325,28 @@ async def health():
 async def startup():
     """Initialize all services on startup"""
     logger.info("=" * 60)
-    logger.info("🚗 Vehicle Re-ID System Starting (No Database Mode)")
+    logger.info("Vehicle Re-ID System Starting (No Database Mode)")
     logger.info("=" * 60)
-    
+
     try:
         logger.info("Loading YOLO detector...")
         vehicle_detector.initialize()
-        logger.info("✓ YOLO detector ready")
-        
+        logger.info("YOLO detector ready")
+
         logger.info("Loading OSNet-AIN embedder...")
         embedding_generator.initialize()
-        logger.info("✓ OSNet-AIN embedder ready")
-        
+        logger.info("OSNet-AIN embedder ready")
+
         logger.info("Initializing FAISS search...")
         search_engine.initialize()
-        logger.info("✓ FAISS search ready")
-        
+        logger.info("FAISS search ready")
+
         logger.info("=" * 60)
-        logger.info("✓ All services initialized successfully")
-        logger.info("🌐 API available at: http://localhost:8000")
-        logger.info("📖 Documentation at: http://localhost:8000/docs")
+        logger.info("All services initialized successfully")
+        logger.info("API available at: http://localhost:8000")
+        logger.info("Documentation at: http://localhost:8000/docs")
         logger.info("=" * 60)
-    
+
     except Exception as e:
         logger.error(f"Startup error: {str(e)}")
         raise
