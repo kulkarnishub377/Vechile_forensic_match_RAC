@@ -19,8 +19,8 @@ Complete installation guide for the Vehicle Re-Identification System.
 ### 1️⃣ Clone Repository
 
 ```bash
-git clone <your-repo-url>
-cd _frame_image_finder
+git clone https://github.com/kulkarnishub377/Vechile_forensic_match_RAC.git
+cd Vechile_forensic_match_RAC
 ```
 
 ### 2️⃣ Create Virtual Environment
@@ -169,8 +169,8 @@ curl http://localhost:8000/api/health
 
 ```bash
 # Clone repository
-git clone <your-repo-url>
-cd _frame_image_finder
+git clone https://github.com/kulkarnishub377/Vechile_forensic_match_RAC.git
+cd Vechile_forensic_match_RAC
 
 # Start with Docker Compose
 docker-compose up -d

@@ -17,7 +17,7 @@
 <!-- License and Version -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?logo=opensourceinitiative&logoColor=white)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg?logo=semver&logoColor=white)](CHANGELOG.md)
-[![Release](https://img.shields.io/badge/release-stable-success.svg?logo=github&logoColor=white)](https://github.com/yourusername/vehicle-reid-system/releases)
+[![Release](https://img.shields.io/badge/release-stable-success.svg?logo=github&logoColor=white)](https://github.com/kulkarnishub377/Vechile_forensic_match_RAC/releases)
 
 <!-- Platform Support -->
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg?logo=windowsterminal&logoColor=white)](docs/INSTALL.md)
@@ -178,8 +178,8 @@ The **Vehicle Re-Identification System** is a complete, standalone application f
 
 ```bash
 # 1. Clone repository
-git clone <repository-url>
-cd _frame_image_finder
+git clone https://github.com/kulkarnishub377/Vechile_forensic_match_RAC.git
+cd Vechile_forensic_match_RAC
 
 # 2. Create virtual environment
 python -m venv venv

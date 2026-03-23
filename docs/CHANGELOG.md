@@ -172,8 +172,8 @@ GET  /docs              # Interactive API documentation
 ### Quick Installation
 ```bash
 # 1. Clone repository
-git clone <your-repo-url>
-cd _frame_image_finder
+git clone https://github.com/kulkarnishub377/Vechile_forensic_match_RAC.git
+cd Vechile_forensic_match_RAC
 
 # 2. Create virtual environment
 python -m venv venv

@@ -63,8 +63,8 @@ Submit feature requests via issues with:
 
 ### 1. Fork & Clone
 ```bash
-git clone https://github.com/yourusername/vehicle-reid-system.git
-cd vehicle-reid-system
+git clone https://github.com/kulkarnishub377/Vechile_forensic_match_RAC.git
+cd Vechile_forensic_match_RAC
 ```
 
 ### 2. Create Branch
