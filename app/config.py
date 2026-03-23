@@ -127,4 +127,4 @@ BATCH_SIZE = int(os.getenv("BATCH_SIZE", 1))
 # - Results temporary per session
 # - Perfect for testing and real-time matching
 
-print(f"✓ Configuration loaded: {SYSTEM_NAME} v{SYSTEM_VERSION}")
+print(f"Configuration loaded: {SYSTEM_NAME} v{SYSTEM_VERSION}")
