@@ -1,98 +1,57 @@
-# 🚀 Scripts - Startup & Operational Commands
-
-Quick start scripts for running the Vehicle Forensic Matching System.
+# 🚀 Scripts Directory
 
 ## Available Scripts
 
-### **run_api.py** - REST API Server
+### `start_server.py`
+**Purpose:** Launch the Vehicle Re-Identification System web server
 
-Starts the production FastAPI server on port 8000.
-
+**Usage:**
 ```bash
-python run_api.py
+python scripts/start_server.py
 ```
 
 **What it does:**
-- Initializes FastAPI application
-- Loads models and configuration
-- Starts Uvicorn ASGI server
-- Enables API documentation at `/docs`
+- Starts FastAPI server on `http://0.0.0.0:8000`
+- Enables auto-reload for development
+- Loads ML models on startup
+- Serves frontend UI and API endpoints
 
-**Environment**: Production-ready
-
----
-
-### **run_ingestion.py** - Background Ingestion Worker
-
-Starts the background worker that processes new vehicles.
-
-```bash
-python run_ingestion.py
-```
-
-**What it does:**
-- Monitors database for new transactions
-- Extracts vehicle images from storage
-- Runs object detection (YOLO)
-- Performs OCR on license plates
-- Generates embeddings
-- Stores vectors in FAISS database
-- Polls every 10 seconds
-
-**Environment**: Production-ready
+**Access:**
+- Web UI: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+- Health Check: http://localhost:8000/api/health
 
 ---
 
-## Usage
+## Alternative Launch Methods
 
-**Standard Deployment** (2 terminals):
-
+### Direct Uvicorn Command
 ```bash
-# Terminal 1: API Server
-python scripts/run_api.py
-
-# Terminal 2: Ingestion Worker
-python scripts/run_ingestion.py
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**With Monitoring** (3 terminals):
-
+### Production Mode (No Reload)
 ```bash
-# Terminal 1: API Server
-python scripts/run_api.py
-
-# Terminal 2: Ingestion Worker
-python scripts/run_ingestion.py
-
-# Terminal 3: Monitor (optional)
-python ../tools/monitor_ingestion.py
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
-
----
-
-## Configuration
-
-Scripts use settings from: `../configs/config.ini`
-
-Key configuration options:
-- Database connection details
-- Model paths and backends
-- API port (default: 8000)
-- Cache settings
-- Logging levels
 
 ---
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Port 8000 in use | Change port in config.ini or use different terminal |
-| Models not found | Run `python ../tools/verify_system.py` |
-| DB connection failed | Check credentials in `configs/config.ini` |
-| Low memory | Use OpenVINO backend for faster, lighter models |
+**Port already in use:**
+```bash
+# Change port in start_server.py or use:
+python -m uvicorn app.main:app --port 8001
+```
+
+**Models not loading:**
+```bash
+# Check console output for errors
+# Models download automatically on first run
+# Ensure internet connection for first-time setup
+```
 
 ---
 
-**Location**: `d:\_frame_image_finder\scripts\`  
-**Status**: Production Ready (v3.0.0)
+**Note:** Old scripts (`run_api.py`, `run_ingestion.py`) have been removed as they were for the previous database-dependent system.
