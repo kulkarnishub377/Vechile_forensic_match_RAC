@@ -31,7 +31,7 @@ The **Vehicle Re-Identification System** is a complete, standalone application f
 
 - ✅ **No Database Required** - All processing in-memory
 - ✅ **Session-Based** - Upload images and search within your session
-- ✅ **Production-Ready Models** - YOLO v8 + OSNet-AIN (512-D embeddings)
+- ✅ **Custom + Auto-Download Models** - Smart model loading with fallback
 - ✅ **Fast Search** - FAISS vector similarity search
 - ✅ **OpenVINO Support** - Optimized CPU inference
 - ✅ **Modern UI** - Clean web interface with drag-and-drop
@@ -135,9 +135,10 @@ source venv/bin/activate
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Download models (automatic on first run)
-# YOLOv8: ~/.cache/torch/hub/ultralytics/yolov8n.pt
-# OSNet: ~/.cache/torch/hub/torchreid/osnet_ain_x1_0.pth
+# 4. Models (Smart Loading System)
+# Custom models (if available): models/yolov5_sites_vehicle_v2.pt, models/osnet_ain_x1_0_imagenet.pth
+# Auto-fallback: Downloads YOLOv8n.pt and OSNet-AIN if custom models not found
+# First run may take 30-60 seconds for model download/initialization
 ```
 
 ### Running the System
@@ -214,15 +215,30 @@ Results show:
 
 ### Models
 
-#### **YOLOv8** (Vehicle Detection)
-- **Model:** YOLOv8n (nano) - 3.2M parameters
+#### **Smart Model Loading System**
+The system features an intelligent model loading mechanism:
+
+1. **Custom Trained Models** (Priority)
+   - `models/yolov5_sites_vehicle_v2.pt` - Custom YOLO for vehicle detection
+   - `models/osnet_ain_x1_0_imagenet.pth` - Custom OSNet-AIN ReID model
+   - Enhanced accuracy for specific vehicle types and scenarios
+
+2. **Auto-Download Fallback** (If custom models unavailable)
+   - Downloads YOLOv8n from Ultralytics Hub
+   - Downloads OSNet-AIN from TorchReID Hub
+   - Ensures system works out-of-the-box
+
+#### **YOLOv8/YOLOv5** (Vehicle Detection)
+- **Custom Model:** YOLOv5 Sites Vehicle v2 (if available)
+- **Fallback Model:** YOLOv8n (nano) - 3.2M parameters
 - **Input:** 640×640 RGB images
 - **Output:** Bounding boxes + class labels
 - **Classes:** Cars, Trucks, Buses, Motorcycles
 - **Speed:** ~50ms per image (CPU)
 
 #### **OSNet-AIN** (Feature Extraction)
-- **Architecture:** OSNet-AIN x1.0
+- **Custom Model:** OSNet-AIN ImageNet fine-tuned (if available)
+- **Fallback Model:** OSNet-AIN x1.0 pretrained
 - **Input:** 256×128 vehicle crops
 - **Output:** 512-D normalized embeddings
 - **Training:** ImageNet → Market-1501 → VeRi-776
