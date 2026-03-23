@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # FastAPI App
 app = FastAPI(
-    title="🚗 Vehicle Re-Identification System",
+    title="Vehicle Re-Identification System",
     description="Image-Based Vehicle Matching (No Database)",
     version="2.0.0"
 )
@@ -286,7 +286,7 @@ async def clear_session(session_id: str):
         session_manager.clear_session(session_id)
         search_engine.clear_session_index(session_id)
         
-        logger.info(f"✓ Session cleared: {session_id[:8]}...")
+        logger.info(f"Session cleared: {session_id[:8]}...")
         
         return {
             "success": True,
