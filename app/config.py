@@ -1,249 +1,114 @@
 """
-Configuration Module - Loads settings from config.ini
+Configuration Module - Vehicle Re-ID System (No Database)
+Clean, environment-based configuration for all services
 """
+
 import os
-import configparser
+import logging
 from pathlib import Path
 
-# Load config.ini
+# ═══════════════════════════════════════════════════════════════════════
+# BASE PATHS
+# ═══════════════════════════════════════════════════════════════════════
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-CONFIG_PATH = BASE_DIR / 'config.ini'
+FRONTEND_DIR = BASE_DIR / "frontend"
+MODELS_DIR = BASE_DIR / "models"
+TEMP_DIR = BASE_DIR / "temp"
 
-_config = configparser.ConfigParser()
-_config.read(CONFIG_PATH, encoding='utf-8')
+# Create directories
+TEMP_DIR.mkdir(exist_ok=True)
 
-# Helper functions
-def _get(section: str, key: str, fallback: str = "") -> str:
-    return _config.get(section, key, fallback=fallback)
+# ═══════════════════════════════════════════════════════════════════════
+# SYSTEM & LOGGING
+# ═══════════════════════════════════════════════════════════════════════
 
-def _getint(section: str, key: str, fallback: int = 0) -> int:
-    return _config.getint(section, key, fallback=fallback)
+SYSTEM_NAME = "Vehicle Re-Identification System"
+SYSTEM_VERSION = "2.0.0"
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-def _getfloat(section: str, key: str, fallback: float = 0.0) -> float:
-    return _config.getfloat(section, key, fallback=fallback)
+# ═══════════════════════════════════════════════════════════════════════
+# API SERVER
+# ═══════════════════════════════════════════════════════════════════════
 
-def _getboolean(section: str, key: str, fallback: bool = False) -> bool:
-    return _config.getboolean(section, key, fallback=fallback)
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("API_PORT", 8000))
+API_WORKERS = int(os.getenv("API_WORKERS", 4))
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# SYSTEM
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SYSTEM_VERSION = _get('system', 'version', '3.0.0')
-EMBEDDING_VERSION = _get('system', 'embedding_version', 'v512')
-ENVIRONMENT = _get('system', 'environment', 'production')
+# ═══════════════════════════════════════════════════════════════════════
+# SESSION CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# PATHS
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-VECTOR_DB_DIR = BASE_DIR / _get('paths', 'vector_db_path', 'vector_db') / EMBEDDING_VERSION
-MODELS_DIR = BASE_DIR / _get('paths', 'models_dir', 'models')
-DATA_DIR = BASE_DIR / _get('paths', 'data_dir', 'data')
-LOGS_DIR = BASE_DIR / _get('paths', 'logs_dir', 'logs')
+MAX_SESSIONS = 100
+MAX_IMAGES_PER_SESSION = 100
+MAX_SESSION_DURATION_HOURS = 24
+SESSION_CLEANUP_INTERVAL_MINUTES = 60
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# UPLOAD CONFIGURATION (NEW - Standalone System)
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# NOTE: Database configuration removed - system is now standalone
-# Images are uploaded locally instead of fetched from database
+# ═══════════════════════════════════════════════════════════════════════
+# FILE UPLOAD
+# ═══════════════════════════════════════════════════════════════════════
 
-# Upload directories
-UPLOAD_DIR = DATA_DIR / 'uploads'
-ENTRY_UPLOAD_DIR = UPLOAD_DIR / 'entry'
-EXIT_UPLOAD_DIR = UPLOAD_DIR / 'exit'
+MAX_FILE_SIZE_MB = 50
+SUPPORTED_FORMATS = ["jpg", "jpeg", "png", "bmp", "webp"]
+SUPPORTED_FORMATS_MIME = [
+    "image/jpeg",
+    "image/png",
+    "image/bmp",
+    "image/webp"
+]
 
-# File constraints
-MAX_UPLOAD_SIZE_MB = _getint('upload', 'max_upload_size_mb', 10)
-MIN_IMAGE_WIDTH = _getint('upload', 'min_image_width', 640)
-MIN_IMAGE_HEIGHT = _getint('upload', 'min_image_height', 480)
-ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp']
-MAX_BATCH_SIZE = _getint('upload', 'max_batch_size', 50)
+# ═══════════════════════════════════════════════════════════════════════
+# ML MODELS
+# ═══════════════════════════════════════════════════════════════════════
 
-# Processing options
-ENABLE_THUMBNAIL_GENERATION = _getboolean('upload', 'enable_thumbnail_generation', False)
-THUMBNAIL_SIZE = _getint('upload', 'thumbnail_size', 256)
-ENABLE_EXIF_EXTRACTION = _getboolean('upload', 'enable_exif_extraction', False)
+# YOLO Detection
+YOLO_MODEL = os.getenv("YOLO_MODEL", "yolov5n")
+YOLO_CONF_THRESHOLD = float(os.getenv("YOLO_CONF_THRESHOLD", 0.5))
+YOLO_IOU_THRESHOLD = float(os.getenv("YOLO_IOU_THRESHOLD", 0.4))
+YOLO_MAX_DET = int(os.getenv("YOLO_MAX_DET", 10))
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# REID MODEL
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REID_BACKEND = _get('reid', 'backend', 'torchreid')
-REID_CHECKPOINT_PATH = BASE_DIR / _get('reid', 'checkpoint_path', 'models/reid/osnetv3.tar-50')
-REID_MODEL_NAME = _get('reid', 'model_name', 'osnet_ain_x1_0')
-REID_IMAGE_SIZE = _getint('reid', 'image_size', 384)
-REID_MULTI_SCALE = _getboolean('reid', 'multi_scale', True)
-REID_SCALES = [1.0]  # Default scale for single-scale extraction
-REID_EMBEDDING_DIM = _getint('reid', 'embedding_dim', 512)
-REID_OPENVINO_PATH = BASE_DIR / _get('reid', 'openvino_path', 'models/reid/openvino/osnetv3_384x384_FP16.xml')
-REID_DEVICE = _get('reid', 'device', 'cuda')
-USE_GPU = _getboolean('reid', 'use_gpu', True)
-GPU_ID = _getint('reid', 'gpu_id', 0)
+# OSNet ReID
+OSNET_MODEL = os.getenv("OSNET_MODEL", "osnet_ain_x1_0")
+OSNET_EMBEDDING_DIM = int(os.getenv("OSNET_EMBEDDING_DIM", 512))
+OSNET_IMG_SIZE = (256, 128)
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# YOLO DETECTOR
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-YOLO_BACKEND = _get('yolo', 'backend', 'openvino')
-YOLO_PYTORCH_MODEL = BASE_DIR / _get('yolo', 'pytorch_model_path', 'models/detection/yolov5n_sites_v3.pt')
-YOLO_OPENVINO_MODEL = BASE_DIR / _get('yolo', 'openvino_model_path', 'models/detection/yolo26n_site_v3_openvino_model/yolo26n_site_v3.xml')
-YOLO_OPENVINO_DEVICE = _get('yolo', 'openvino_device', 'CPU')
-YOLO_OPENVINO_PRECISION = _get('yolo', 'openvino_precision', 'FP16')
-# YOLO detection thresholds
-YOLO_CONFIDENCE_THRESHOLD = _getfloat('yolo', 'confidence_threshold', 0.25)
-YOLO_IOU_THRESHOLD = _getfloat('yolo', 'iou_threshold', 0.45)
-YOLO_IMAGE_SIZE = _getint('yolo', 'image_size', 480)
-YOLO_VEHICLE_CONF_THRESHOLD = _getfloat('yolo', 'vehicle_conf_threshold', 0.15)
-YOLO_VEHICLE_IOU_THRESHOLD = _getfloat('yolo', 'vehicle_iou_threshold', 0.45)
-YOLO_PLATE_CONF_THRESHOLD = _getfloat('yolo', 'plate_conf_threshold', 0.30)
-YOLO_PLATE_IOU_THRESHOLD = _getfloat('yolo', 'plate_iou_threshold', 0.45)
+# FAISS Search
+FAISS_USE_GPU = os.getenv("FAISS_USE_GPU", "false").lower() == "true"
+FAISS_DISTANCE_METRIC = os.getenv("FAISS_DISTANCE_METRIC", "l2")  # l2 or cosine
+FAISS_TOP_K = int(os.getenv("FAISS_TOP_K", 50))
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# OCR
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ENABLE_OCR = _getboolean('ocr', 'enable', True)
-OCR_BACKEND = _get('ocr', 'backend', 'paddle')
+# ═══════════════════════════════════════════════════════════════════════
+# MATCHING ALGORITHM
+# ═══════════════════════════════════════════════════════════════════════
 
-# PaddleOCR 3-model pipeline (detection, recognition, classification)
-OCR_REC_MODEL_DIR = BASE_DIR / _get('ocr', 'rec_model_dir', 'models/ocr_models/PP-OCRv4_mobile_rec_infer_v16')
-OCR_DET_MODEL_DIR = BASE_DIR / _get('ocr', 'det_model_dir', 'models/ocr_models/en_PP-OCRv3_det_infer')
-OCR_CLS_MODEL_DIR = BASE_DIR / _get('ocr', 'cls_model_dir', 'models/ocr_models/ch_ppocr_mobile_v2.0_cls_slim_infer')
-OCR_DICT_PATH = BASE_DIR / _get('ocr', 'dict_path', 'models/ocr_models/PP-OCRv4_mobile_rec_infer_v16/plate_dict.txt')
+MATCH_CONFIDENCE_THRESHOLD = float(os.getenv("MATCH_CONFIDENCE_THRESHOLD", 0.85))
+MATCH_CONFIDENT_LEVEL = float(os.getenv("MATCH_CONFIDENT_LEVEL", 0.92))
+MATCH_PROBABLE_LEVEL = float(os.getenv("MATCH_PROBABLE_LEVEL", 0.85))
 
-# Legacy path (for backward compatibility)
-OCR_MODEL_DIR = BASE_DIR / _get('ocr', 'model_dir', 'models/ocr/PP-OCRv4_mobile_rec_infer_v16')
+# ═══════════════════════════════════════════════════════════════════════
+# PROCESSING TIMEOUTS
+# ═══════════════════════════════════════════════════════════════════════
 
-# PaddleOCR settings
-OCR_USE_ANGLE_CLS = _getboolean('ocr', 'use_angle_cls', True)
-OCR_LANG = _get('ocr', 'lang', 'en')
-OCR_CONFIDENCE_THRESHOLD = _getfloat('ocr', 'confidence_threshold', 0.60)
-OCR_USE_GPU = _getboolean('ocr', 'use_gpu', False)
-OCR_ENABLE_MKLDNN = _getboolean('ocr', 'enable_mkldnn', True)
-OCR_CPU_THREADS = _getint('ocr', 'cpu_threads', 4)
-OCR_MIN_TEXT_LENGTH = _getint('ocr', 'min_text_length', 4)
-OCR_MAX_TEXT_LENGTH = _getint('ocr', 'max_text_length', 10)
-OCR_ALLOWED_CHARACTERS = _get('ocr', 'allowed_characters', '0123456789ABCDEFGHJKLMNOPQRSTUVWXYZ')
+DETECTION_TIMEOUT_SECONDS = int(os.getenv("DETECTION_TIMEOUT_SECONDS", 30))
+EMBEDDING_TIMEOUT_SECONDS = int(os.getenv("EMBEDDING_TIMEOUT_SECONDS", 30))
+SEARCH_TIMEOUT_SECONDS = int(os.getenv("SEARCH_TIMEOUT_SECONDS", 10))
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# MATCHING
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ENABLE_OCR_MATCHING = _getboolean('matching', 'enable_ocr_matching', True)
-OCR_EXACT_MATCH_ONLY = _getboolean('matching', 'ocr_exact_match_only', True)
-OCR_MIN_CONFIDENCE = _getfloat('matching', 'ocr_min_confidence', 0.70)
-OCR_BOOST_SCORE = _getfloat('matching', 'ocr_boost_score', 0.30)
+# ═══════════════════════════════════════════════════════════════════════
+# PERFORMANCE
+# ═══════════════════════════════════════════════════════════════════════
 
-EMBEDDING_WEIGHT = _getfloat('matching', 'embedding_weight', 0.40)
-COLOR_WEIGHT = _getfloat('matching', 'color_weight', 0.20)
-TIME_WEIGHT = _getfloat('matching', 'time_weight', 0.15)
-ORB_WEIGHT = _getfloat('matching', 'orb_weight', 0.15)
-SCALE_WEIGHT = _getfloat('matching', 'scale_weight', 0.10)
+ENABLE_GPU = os.getenv("ENABLE_GPU", "false").lower() == "true"
+NUM_WORKERS = int(os.getenv("NUM_WORKERS", 4))
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", 1))
 
-# Matching aliases (for backward compatibility)
-MATCHING_MIN_OCR_CONFIDENCE = OCR_MIN_CONFIDENCE
-MATCHING_OCR_BOOST_SCORE = OCR_BOOST_SCORE
-MATCHING_WEIGHT_EMBEDDING = EMBEDDING_WEIGHT
-MATCHING_WEIGHT_COLOR = COLOR_WEIGHT
-MATCHING_WEIGHT_TIME = TIME_WEIGHT
-MATCHING_WEIGHT_ORB = ORB_WEIGHT
-MATCHING_WEIGHT_SCALE = SCALE_WEIGHT
-MATCHING_ENABLE_OCR_MATCHING = ENABLE_OCR_MATCHING
+# ═══════════════════════════════════════════════════════════════════════
+# NOTE: NO DATABASE CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════
+# This is a stateless, in-memory system
+# - Images stored in RAM (session-based)
+# - Embeddings in FAISS in-memory index
+# - No persistent database required
+# - Results temporary per session
+# - Perfect for testing and real-time matching
 
-# Time window settings (CRITICAL: Only search 10-hour uncombined entries)
-TIME_WINDOW_HOURS = _getint('matching', 'time_window_hours', 10)
-MATCHING_SEARCH_WINDOW_HOURS = TIME_WINDOW_HOURS
-UNCOMBINED_SEARCH_HOURS = _getint('matching', 'uncombined_search_hours', 10)
-DEFAULT_TOP_K = _getint('matching', 'default_top_k', 10)
-MAX_TOP_K = _getint('matching', 'max_top_k', 50)
-FAISS_K_MULTIPLIER = _getint('matching', 'faiss_k_multiplier', 4)
-
-MIN_SIMILARITY_SCORE = _getfloat('matching', 'min_similarity_score', 0.55)
-MIN_ORB_MATCHES = _getint('matching', 'min_orb_matches', 8)
-
-SCORE_GAP_HIGH_CONFIDENCE = _getfloat('matching', 'score_gap_high', 0.15)
-SCORE_GAP_MEDIUM_CONFIDENCE = _getfloat('matching', 'score_gap_medium', 0.08)
-
-ORB_LOWE_RATIO = _getfloat('matching', 'orb_lowe_ratio', 0.75)
-RANSAC_REPROJ_THRESHOLD = _getfloat('matching', 'ransac_reproj_threshold', 5.0)
-MIN_RANSAC_INLIERS = _getint('matching', 'min_ransac_inliers', 8)
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# FAISS
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-FAISS_USE_IVF = _getboolean('faiss', 'use_ivf', True)
-FAISS_IVF_NLIST = _getint('faiss', 'ivf_nlist', 100)
-FAISS_IVF_NPROBE = _getint('faiss', 'ivf_nprobe', 12)
-FAISS_LAZY_LOAD = _getboolean('faiss', 'lazy_load', True)
-FAISS_PRELOAD_CURRENT = _getboolean('faiss', 'preload_current', True)
-FAISS_MAX_LOADED_PARTITIONS = _getint('faiss', 'max_loaded_partitions', 3)
-FAISS_PARTITION_TTL_HOURS = _getint('faiss', 'partition_ttl_hours', 20)
-FAISS_AUTO_SAVE_INTERVAL = _getint('faiss', 'auto_save_interval', 20)
-FAISS_SEARCH_BATCH_SIZE = _getint('faiss', 'search_batch_size', 200)
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# INGESTION
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-INGESTION_BATCH_SIZE = _getint('ingestion', 'batch_size', 100)
-INGESTION_WORKER_THREADS = _getint('ingestion', 'worker_threads', 6)
-INGESTION_POLL_INTERVAL = _getint('ingestion', 'poll_interval', 10)
-INGESTION_LOOKBACK_HOURS = _getint('ingestion', 'lookback_hours', 8)
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# API
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-API_HOST = _get('api', 'host', '0.0.0.0')
-API_PORT = _getint('api', 'port', 8899)
-API_WORKERS = _getint('api', 'workers', 1)
-API_TIMEOUT = _getint('api', 'timeout', 120)
-API_RELOAD = _getboolean('api', 'reload', False)
-ENABLE_API_KEY_AUTH = _getboolean('api', 'enable_api_key_auth', False)
-API_RATE_LIMIT = _get('api', 'rate_limit', '100/minute')
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# CACHE
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ENABLE_CACHE = _getboolean('cache', 'enable', True)
-CACHE_TTL = _getint('cache', 'ttl', 600)
-CACHE_MAX_SIZE = _getint('cache', 'max_size', 1000)
-REDIS_HOST = _get('cache', 'redis_host', 'localhost')
-REDIS_PORT = _getint('cache', 'redis_port', 6379)
-REDIS_DB = _getint('cache', 'redis_db', 0)
-REDIS_MAX_CONNECTIONS = _getint('cache', 'redis_max_connections', 50)
-REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', None)
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# LOGGING
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-LOG_LEVEL = _get('logging', 'level', 'INFO')
-LOG_FORMAT = _get('logging', 'format', '%(asctime)s | %(levelname)-8s | %(process)d:%(threadName)s | %(name)s | %(message)s')
-LOG_DATE_FORMAT = _get('logging', 'date_format', '%Y-%m-%d %H:%M:%S')
-LOG_MAX_SIZE_MB = _getint('logging', 'max_size_mb', 100)
-LOG_BACKUP_COUNT = _getint('logging', 'backup_count', 7)
-
-# Data subdirectories
-ENTRY_TRACK_DIR = DATA_DIR / 'entry_track'
-MATCH_RESULTS_DIR = DATA_DIR / 'match_results'
-LAST_FETCHED_TIME_FILE = DATA_DIR / 'last_fetched_time.txt'
-
-# Log files
-LOG_API = LOGS_DIR / 'api.log'
-LOG_INGESTION = LOGS_DIR / 'ingestion.log'
-LOG_MATCHING = LOGS_DIR / 'matching.log'
-LOG_EMBEDDING = LOGS_DIR / 'embedding.log'
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# COLOR HISTOGRAM
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-COLOR_HIST_H_BINS = 32
-COLOR_HIST_S_BINS = 8
-COLOR_HIST_V_BINS = 8
-COLOR_FEATURE_DIM = COLOR_HIST_H_BINS * COLOR_HIST_S_BINS * COLOR_HIST_V_BINS  # 2048
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# CIRCUIT BREAKER
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5
-CIRCUIT_BREAKER_TIMEOUT = 60
-
-# MODELS_DIR for model loading
-MODELS_DIR = BASE_DIR / _get('paths', 'models_dir', 'models')
-
-# Create directories if they don't exist
-for directory in [DATA_DIR, LOGS_DIR, VECTOR_DB_DIR, ENTRY_TRACK_DIR, MATCH_RESULTS_DIR]:
-    directory.mkdir(parents=True, exist_ok=True)
+print(f"✓ Configuration loaded: {SYSTEM_NAME} v{SYSTEM_VERSION}")
